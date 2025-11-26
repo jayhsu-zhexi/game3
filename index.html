@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法森林數學探險</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 標題區域 */
+        .game-title {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-title h1 {
+            font-size: clamp(28px, 6vw, 48px);
+            margin-bottom: 10px;
+            animation: titleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes titleFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* 關卡地圖 */
+        .level-map {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .level-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .level-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+
+        .level-card:hover::before {
+            left: 100%;
+        }
+
+        .level-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .level-card h3 {
+            font-size: clamp(20px, 4vw, 26px);
+            color: #667eea;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .level-icon {
+            font-size: clamp(40px, 8vw, 60px);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .level-records {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        .record-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .record-item .label {
+            font-size: clamp(12px, 2.5vw, 14px);
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stars {
+            font-size: clamp(16px, 3.5vw, 20px);
+            color: #ffd700;
+        }
+
+        /* 難度選擇彈窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content h2 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: clamp(22px, 5vw, 28px);
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            gap: 15px;
+            flex-direction: column;
+        }
+
+        .difficulty-btn {
+            padding: 20px;
+            font-size: clamp(18px, 4vw, 22px);
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .difficulty-btn.easy {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #2c5f2d;
+        }
+
+        .difficulty-btn.hard {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #8b2500;
+        }
+
+        .difficulty-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-modal {
+            background: #ccc;
+            color: #333;
+            margin-top: 15px;
+            padding: 12px;
+            font-size: clamp(16px, 3.5vw, 18px);
+        }
+
+        /* 遊戲畫面 */
+        .game-screen {
+            display: none;
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-screen.active {
+            display: block;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .back-btn {
+            padding: 12px 24px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: clamp(14px, 3vw, 16px);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #ee5a52;
+            transform: scale(1.05);
+        }
+
+        .question-area {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .question-text {
+            font-size: clamp(18px, 4vw, 24px);
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        /* 時鐘顯示 */
+        .clock-display {
+            width: clamp(150px, 40vw, 250px);
+            height: clamp(150px, 40vw, 250px);
+            border: 8px solid #333;
+            border-radius: 50%;
+            position: relative;
+            background: white;
+            margin: 20px auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .clock-center {
+            width: 12px;
+            height: 12px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .clock-hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            background: #333;
+        }
+
+        .hour-hand {
+            width: 6px;
+            height: 25%;
+            background: #333;
+            margin-left: -3px;
+        }
+
+        .minute-hand {
+            width: 4px;
+            height: 35%;
+            background: #666;
+            margin-left: -2px;
+        }
+
+        .clock-number {
+            position: absolute;
+            font-size: clamp(12px, 3vw, 16px);
+            font-weight: bold;
+            color: #333;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            line-height: 20px;
+            margin-top: -10px;
+            margin-left: -10px;
+        }
+
+        .answers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .answer-btn {
+            padding: 20px;
+            font-size: clamp(16px, 3.5vw, 20px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            min-height: 60px;
+        }
+
+        .answer-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .answer-btn:active {
+            transform: translateY(0);
+        }
+
+        .answer-btn.correct {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            animation: correctPulse 0.5s ease;
+        }
+
+        .answer-btn.wrong {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            animation: wrongShake 0.5s ease;
+        }
+
+        @keyframes correctPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes wrongShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #56ab2f 0%, #a8e063 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* 結果畫面 */
+        .result-screen {
+            display: none;
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-screen.active {
+            display: block;
+            animation: modalSlideIn 0.5s ease;
+        }
+
+        .result-screen h2 {
+            font-size: clamp(28px, 6vw, 36px);
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .result-stars {
+            font-size: clamp(40px, 10vw, 60px);
+            margin: 20px 0;
+        }
+
+        .result-message {
+            font-size: clamp(18px, 4vw, 22px);
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .result-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .result-btn {
+            padding: 15px 30px;
+            font-size: clamp(16px, 3.5vw, 18px);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .home-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .result-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .level-map {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .game-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .answers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .difficulty-buttons {
+                gap: 12px;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .level-map {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 觸控優化 */
+        @media (hover: none) and (pointer: coarse) {
+
+            .answer-btn,
+            .difficulty-btn,
+            .result-btn,
+            .back-btn {
+                min-height: 50px;
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 遊戲標題 -->
+        <div class="game-title">
+            <h1>🌳 魔法森林數學探險 🌳</h1>
+            <p>選擇關卡開始冒險吧！</p>
+        </div>
+
+        <!-- 關卡地圖 -->
+        <div id="levelMap" class="level-map"></div>
+
+        <!-- 難度選擇彈窗 -->
+        <div id="difficultyModal" class="modal">
+            <div class="modal-content">
+                <h2 id="modalTitle">選擇難度</h2>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn easy" onclick="startGame('easy')">
+                        🌱 簡單模式
+                    </button>
+                    <button class="difficulty-btn hard" onclick="startGame('hard')">
+                        🔥 困難模式
+                    </button>
+                    <button class="difficulty-btn close-modal" onclick="closeModal()">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遊戲畫面 -->
+        <div id="gameScreen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">
+                        <span id="levelName">關卡名稱</span>
+                    </div>
+                    <div class="info-item">
+                        題目: <span id="questionNumber">1</span>/<span id="totalQuestions">10</span>
+                    </div>
+                    <div class="info-item">
+                        錯誤: <span id="errorCount">0</span>/2
+                    </div>
+                </div>
+                <button class="back-btn" onclick="exitGame()">返回地圖</button>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
+
+            <div class="question-area">
+                <div id="questionContent" class="question-text"></div>
+                <div id="clockContainer"></div>
+            </div>
+
+            <div id="answersContainer" class="answers-grid"></div>
+        </div>
+
+        <!-- 結果畫面 -->
+        <div id="resultScreen" class="result-screen">
+            <h2 id="resultTitle">恭喜完成！</h2>
+            <div id="resultStars" class="result-stars"></div>
+            <div id="resultMessage" class="result-message"></div>
+            <div class="result-buttons">
+                <button class="result-btn retry-btn" onclick="retryLevel()">再玩一次</button>
+                <button class="result-btn home-btn" onclick="backToMap()">返回地圖</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const AudioSystem = {
+            context: null,
+
+            init() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+            },
+
+            playCorrect() {
+                if (!this.context) this.init();
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+
+                oscillator.frequency.setValueAtTime(523.25, this.context.currentTime);
+                oscillator.frequency.setValueAtTime(659.25, this.context.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(783.99, this.context.currentTime + 0.2);
+
+                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
+
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.3);
+            },
+
+            playWrong() {
+                if (!this.context) this.init();
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+
+                oscillator.frequency.setValueAtTime(200, this.context.currentTime);
+                oscillator.type = 'sawtooth';
+
+                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
+
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.2);
+            },
+
+            playComplete() {
+                if (!this.context) this.init();
+                const notes = [523.25, 587.33, 659.25, 783.99];
+                notes.forEach((freq, i) => {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+
+                    oscillator.frequency.setValueAtTime(freq, this.context.currentTime + i * 0.15);
+                    gainNode.gain.setValueAtTime(0.2, this.context.currentTime + i * 0.15);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + i * 0.15 + 0.3);
+
+                    oscillator.start(this.context.currentTime + i * 0.15);
+                    oscillator.stop(this.context.currentTime + i * 0.15 + 0.3);
+                });
+            }
+        };
+
+        const Levels = [
+            {
+                id: 1,
+                name: '數字魔法師',
+                icon: '🧙‍♂️',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+                    let num1, num2, operator, answer;
+
+                    if (isEasy) {
+                        operator = Math.random() > 0.5 ? '+' : '-';
+                        if (operator === '+') {
+                            num1 = Math.floor(Math.random() * 9) + 1;
+                            num2 = Math.floor(Math.random() * (10 - num1)) + 1;
+                            answer = num1 + num2;
+                        } else {
+                            answer = Math.floor(Math.random() * 9) + 1;
+                            num2 = Math.floor(Math.random() * answer) + 1;
+                            num1 = answer + num2;
+                            answer = num1 - num2;
+                        }
+                    } else {
+                        operator = Math.random() > 0.5 ? '+' : '-';
+                        if (operator === '+') {
+                            num1 = Math.floor(Math.random() * 90) + 10;
+                            num2 = Math.floor(Math.random() * (100 - num1)) + 1;
+                            answer = num1 + num2;
+                        } else {
+                            answer = Math.floor(Math.random() * 90) + 10;
+                            num2 = Math.floor(Math.random() * answer) + 1;
+                            num1 = answer + num2;
+                            answer = num1 - num2;
+                        }
+                    }
+
+                    return {
+                        question: `${num1} ${operator} ${num2} = ?`,
+                        answer: answer,
+                        options: generateOptions(answer, isEasy ? 10 : 100)
+                    };
+                }
+            },
+            {
+                id: 2,
+                name: '故事迷宮',
+                icon: '📖',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+
+                    if (isEasy) {
+                        const scenarios = [
+                            (a, b) => ({
+                                q: `小明有 ${a} 顆糖果，媽媽又給他 ${b} 顆，小明現在有幾顆糖果？`,
+                                a: a + b
+                            }),
+                            (a, b) => ({
+                                q: `樹上有 ${a} 隻小鳥，飛走了 ${b} 隻，還剩下幾隻小鳥？`,
+                                a: a - b
+                            }),
+                            (a, b) => ({
+                                q: `籃子裡有 ${a} 顆蘋果，小華吃掉 ${b} 顆，還剩下幾顆蘋果？`,
+                                a: a - b
+                            })
+                        ];
+
+                        const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+                        const num1 = Math.floor(Math.random() * 15) + 5;
+                        const num2 = Math.floor(Math.random() * num1) + 1;
+                        const result = scenario(num1, num2);
+
+                        return {
+                            question: result.q,
+                            answer: result.a,
+                            options: generateOptions(result.a, 20)
+                        };
+                    } else {
+                        const scenarios = [
+                            () => {
+                                const a = Math.floor(Math.random() * 20) + 10;
+                                const b = Math.floor(Math.random() * 15) + 5;
+                                const c = Math.floor(Math.random() * 10) + 5;
+                                return {
+                                    q: `小明有 ${a} 元，買了一個 ${b} 元的麵包，又買了一瓶 ${c} 元的飲料，還剩下多少元？`,
+                                    a: a - b - c
+                                };
+                            },
+                            () => {
+                                const a = Math.floor(Math.random() * 15) + 5;
+                                const b = Math.floor(Math.random() * 10) + 5;
+                                const c = Math.floor(Math.random() * 10) + 5;
+                                return {
+                                    q: `書架上有 ${a} 本書，小華拿走 ${b} 本，媽媽又放上 ${c} 本，現在有幾本書？`,
+                                    a: a - b + c
+                                };
+                            }
+                        ];
+
+                        const scenario = scenarios[Math.floor(Math.random() * scenarios.length)]();
+
+                        return {
+                            question: scenario.q,
+                            answer: scenario.a,
+                            options: generateOptions(scenario.a, 50)
+                        };
+                    }
+                }
+            },
+            {
+                id: 3,
+                name: '乘法探險家',
+                icon: '✖️',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+                    let num1, num2;
+
+                    if (isEasy) {
+                        const multipliers = [2, 3, 4, 5];
+                        num1 = multipliers[Math.floor(Math.random() * multipliers.length)];
+                        num2 = Math.floor(Math.random() * 9) + 1;
+                    } else {
+                        num1 = Math.floor(Math.random() * 9) + 1;
+                        num2 = Math.floor(Math.random() * 9) + 1;
+                    }
+
+                    const answer = num1 * num2;
+
+                    return {
+                        question: `${num1} × ${num2} = ?`,
+                        answer: answer,
+                        options: generateOptions(answer, isEasy ? 50 : 81)
+                    };
+                }
+            },
+            {
+                id: 4,
+                name: '大小魔王戰',
+                icon: '⚔️',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+                    let num1, num2;
+
+                    if (isEasy) {
+                        num1 = Math.floor(Math.random() * 90) + 10;
+                        num2 = Math.floor(Math.random() * 90) + 10;
+                    } else {
+                        num1 = Math.floor(Math.random() * 900) + 100;
+                        num2 = Math.floor(Math.random() * 900) + 100;
+                    }
+
+                    let answer;
+                    if (num1 > num2) answer = '>';
+                    else if (num1 < num2) answer = '<';
+                    else answer = '=';
+
+                    return {
+                        question: `${num1} _____ ${num2}`,
+                        answer: answer,
+                        options: ['<', '>', '='],
+                        isComparison: true
+                    };
+                }
+            },
+            {
+                id: 5,
+                name: '錢幣大富翁',
+                icon: '💰',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+
+                    if (isEasy) {
+                        const coins = [
+                            { value: 1, count: Math.floor(Math.random() * 5) },
+                            { value: 5, count: Math.floor(Math.random() * 4) },
+                            { value: 10, count: Math.floor(Math.random() * 3) }
+                        ];
+
+                        const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
+                        const description = coins
+                            .filter(c => c.count > 0)
+                            .map(c => `${c.value}元 ${c.count} 個`)
+                            .join('、');
+
+                        return {
+                            question: `你有 ${description}，總共有多少元？`,
+                            answer: total,
+                            options: generateOptions(total, 50)
+                        };
+                    } else {
+                        const coins = [
+                            { value: 1, count: Math.floor(Math.random() * 5) },
+                            { value: 5, count: Math.floor(Math.random() * 3) },
+                            { value: 10, count: Math.floor(Math.random() * 3) },
+                            { value: 50, count: Math.floor(Math.random() * 2) },
+                            { value: 100, count: Math.floor(Math.random() * 2) }
+                        ];
+
+                        const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
+                        const description = coins
+                            .filter(c => c.count > 0)
+                            .map(c => `${c.value}元 ${c.count} 個`)
+                            .join('、');
+
+                        return {
+                            question: `你有 ${description}，總共有多少元？`,
+                            answer: total,
+                            options: generateOptions(total, 300)
+                        };
+                    }
+                }
+            },
+            {
+                id: 6,
+                name: '時間魔法鐘',
+                icon: '🕐',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+                    let hour, minute, answer;
+
+                    if (isEasy) {
+                        hour = Math.floor(Math.random() * 12) + 1;
+                        minute = Math.random() > 0.5 ? 0 : 30;
+                    } else {
+                        hour = Math.floor(Math.random() * 12) + 1;
+                        minute = Math.floor(Math.random() * 12) * 5;
+                    }
+
+                    const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    answer = formatTime(hour, minute);
+
+                    return {
+                        question: '現在是幾點？',
+                        answer: answer,
+                        hour: hour,
+                        minute: minute,
+                        options: generateTimeOptions(hour, minute, isEasy),
+                        isClock: true
+                    };
+                }
+            }
+        ];
+
+        function generateOptions(correctAnswer, range) {
+            const options = [correctAnswer];
+
+            while (options.length < 4) {
+                let option;
+                if (typeof correctAnswer === 'number') {
+                    const offset = Math.floor(Math.random() * 20) - 10;
+                    option = correctAnswer + offset;
+                    if (option < 0) option = Math.abs(option);
+                    if (option > range) option = option % range;
+                } else {
+                    option = Math.floor(Math.random() * range);
+                }
+
+                if (!options.includes(option) && option >= 0) {
+                    options.push(option);
+                }
+            }
+
+            return shuffleArray(options);
+        }
+
+        function generateTimeOptions(hour, minute, isEasy) {
+            const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            const correctAnswer = formatTime(hour, minute);
+
+            const options = [correctAnswer];
+
+            while (options.length < 4) {
+                const h = Math.floor(Math.random() * 12) + 1;
+                const m = isEasy
+                    ? (Math.random() > 0.5 ? 0 : 30)
+                    : Math.floor(Math.random() * 12) * 5;
+
+                const option = formatTime(h, m);
+
+                if (!options.includes(option)) {
+                    options.push(option);
+                }
+            }
+
+            return shuffleArray(options);
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function drawClock(hour, minute) {
+            const container = document.getElementById('clockContainer');
+            let numbersHtml = '';
+            for (let i = 1; i <= 12; i++) {
+                const angleRad = (i * 30 - 90) * (Math.PI / 180);
+                const radius = 40;
+                const x = 50 + radius * Math.cos(angleRad);
+                const y = 50 + radius * Math.sin(angleRad);
+                numbersHtml += `<div class="clock-number" style="left: ${x}%; top: ${y}%">${i}</div>`;
+            }
+
+            container.innerHTML = `
+                <div class="clock-display">
+                    ${numbersHtml}
+                    <div class="clock-center"></div>
+                    <div class="clock-hand hour-hand" style="transform: rotate(${(hour % 12) * 30 + minute * 0.5}deg)"></div>
+                    <div class="clock-hand minute-hand" style="transform: rotate(${minute * 6}deg)"></div>
+                </div>
+            `;
+        }
+
+        const Storage = {
+            getRecord(levelId, difficulty) {
+                const key = `level_${levelId}_${difficulty}`;
+                return parseInt(localStorage.getItem(key)) || 0;
+            },
+
+            saveRecord(levelId, difficulty, stars) {
+                const key = `level_${levelId}_${difficulty}`;
+                const current = this.getRecord(levelId, difficulty);
+                if (stars > current) {
+                    localStorage.setItem(key, stars);
+                }
+            }
+        };
+
+        let gameState = {
+            currentLevel: null,
+            difficulty: null,
+            questionIndex: 0,
+            errors: 0,
+            totalQuestions: 10,
+            questions: []
+        };
+
+        function renderLevelMap() {
+            const mapContainer = document.getElementById('levelMap');
+            mapContainer.innerHTML = '';
+
+            Levels.forEach(level => {
+                const easyStars = Storage.getRecord(level.id, 'easy');
+                const hardStars = Storage.getRecord(level.id, 'hard');
+
+                const card = document.createElement('div');
+                card.className = 'level-card';
+                card.onclick = () => openDifficultyModal(level.id);
+
+                card.innerHTML = `
+                    <div class="level-icon">${level.icon}</div>
+                    <h3>${level.name}</h3>
+                    <div class="level-records">
+                        <div class="record-item">
+                            <div class="label">簡單</div>
+                            <div class="stars">${'⭐'.repeat(easyStars)}${'☆'.repeat(3 - easyStars)}</div>
+                        </div>
+                        <div class="record-item">
+                            <div class="label">困難</div>
+                            <div class="stars">${'⭐'.repeat(hardStars)}${'☆'.repeat(3 - hardStars)}</div>
+                        </div>
+                    </div>
+                `;
+
+                mapContainer.appendChild(card);
+            });
+        }
+
+        function openDifficultyModal(levelId) {
+            gameState.currentLevel = Levels.find(l => l.id === levelId);
+            const modal = document.getElementById('difficultyModal');
+            const title = document.getElementById('modalTitle');
+            title.textContent = `${gameState.currentLevel.name} - 選擇難度`;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('difficultyModal').classList.remove('active');
+        }
+
+        function startGame(difficulty) {
+            gameState.difficulty = difficulty;
+            gameState.questionIndex = 0;
+            gameState.errors = 0;
+            gameState.questions = [];
+
+            for (let i = 0; i < gameState.totalQuestions; i++) {
+                gameState.questions.push(gameState.currentLevel.generateQuestion(difficulty));
+            }
+
+            closeModal();
+            document.getElementById('levelMap').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+
+            updateGameUI();
+            showQuestion();
+        }
+
+        function updateGameUI() {
+            document.getElementById('levelName').textContent = gameState.currentLevel.name;
+            document.getElementById('questionNumber').textContent = gameState.questionIndex + 1;
+            document.getElementById('totalQuestions').textContent = gameState.totalQuestions;
+            document.getElementById('errorCount').textContent = gameState.errors;
+
+            const progress = ((gameState.questionIndex) / gameState.totalQuestions) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showQuestion() {
+            const question = gameState.questions[gameState.questionIndex];
+            const questionContent = document.getElementById('questionContent');
+            const answersContainer = document.getElementById('answersContainer');
+            const clockContainer = document.getElementById('clockContainer');
+
+            questionContent.textContent = question.question;
+            clockContainer.innerHTML = '';
+
+            if (question.isClock) {
+                drawClock(question.hour, question.minute);
+            }
+
+            answersContainer.innerHTML = '';
+            question.options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = option;
+                btn.onclick = () => checkAnswer(option, btn);
+                answersContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, btnElement) {
+            const question = gameState.questions[gameState.questionIndex];
+            const isCorrect = selected === question.answer;
+
+            document.querySelectorAll('.answer-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+            });
+
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                AudioSystem.playCorrect();
+
+                setTimeout(() => {
+                    gameState.questionIndex++;
+
+                    if (gameState.questionIndex >= gameState.totalQuestions) {
+                        endGame();
+                    } else {
+                        updateGameUI();
+                        showQuestion();
+                    }
+                }, 1000);
+            } else {
+                btnElement.classList.add('wrong');
+                AudioSystem.playWrong();
+                gameState.errors++;
+
+                document.getElementById('errorCount').textContent = gameState.errors;
+
+                if (gameState.errors >= 3) {
+                    setTimeout(() => {
+                        endGame();
+                    }, 1000);
+                } else {
+                    setTimeout(() => {
+                        showQuestion();
+                    }, 1000);
+                }
+            }
+        }
+
+        function endGame() {
+            const correctAnswers = gameState.totalQuestions - gameState.errors;
+            let stars = 0;
+
+            if (gameState.errors === 0) stars = 3;
+            else if (gameState.errors === 1) stars = 2;
+            else if (gameState.errors === 2) stars = 1;
+
+            Storage.saveRecord(gameState.currentLevel.id, gameState.difficulty, stars);
+
+            document.getElementById('gameScreen').classList.remove('active');
+            const resultScreen = document.getElementById('resultScreen');
+            resultScreen.classList.add('active');
+
+            const resultTitle = document.getElementById('resultTitle');
+            const resultStars = document.getElementById('resultStars');
+            const resultMessage = document.getElementById('resultMessage');
+
+            if (stars === 3) {
+                resultTitle.textContent = '太棒了！完美過關！';
+                resultMessage.textContent = `你答對了全部 ${gameState.totalQuestions} 題！`;
+                AudioSystem.playComplete();
+            } else if (stars > 0) {
+                resultTitle.textContent = '做得好！';
+                resultMessage.textContent = `你答對了 ${correctAnswers} 題，繼續加油！`;
+                AudioSystem.playComplete();
+            } else {
+                resultTitle.textContent = '再接再厲！';
+                resultMessage.textContent = `這次答對了 ${correctAnswers} 題，下次一定會更好！`;
+            }
+
+            resultStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        }
+
+        function exitGame() {
+            if (confirm('確定要離開遊戲嗎？進度將不會保存。')) {
+                backToMap();
+            }
+        }
+
+        function retryLevel() {
+            document.getElementById('resultScreen').classList.remove('active');
+            startGame(gameState.difficulty);
+        }
+
+        function backToMap() {
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('resultScreen').classList.remove('active');
+            document.getElementById('levelMap').style.display = 'grid';
+            renderLevelMap();
+        }
+
+        window.onload = () => {
+            AudioSystem.init();
+            renderLevelMap();
+        };
+    </script>
+</body>
+
+</html>
