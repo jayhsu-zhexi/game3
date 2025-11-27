@@ -735,21 +735,45 @@
                     } else {
                         const scenarios = [
                             () => {
-                                const a = Math.floor(Math.random() * 20) + 10;
-                                const b = Math.floor(Math.random() * 15) + 5;
-                                const c = Math.floor(Math.random() * 10) + 5;
+                                // 確保答案非負：先決定剩餘金額，再計算總金額
+                                const remaining = Math.floor(Math.random() * 15) + 5; // 剩餘5-19元
+                                const b = Math.floor(Math.random() * 15) + 5; // 麵包5-19元
+                                const c = Math.floor(Math.random() * 10) + 5; // 飲料5-14元
+                                const a = remaining + b + c; // 總金額 = 剩餘 + 花費
                                 return {
                                     q: `小明有 ${a} 元，買了一個 ${b} 元的麵包，又買了一瓶 ${c} 元的飲料，還剩下多少元？`,
-                                    a: a - b - c
+                                    a: remaining
                                 };
                             },
                             () => {
-                                const a = Math.floor(Math.random() * 15) + 5;
-                                const b = Math.floor(Math.random() * 10) + 5;
-                                const c = Math.floor(Math.random() * 10) + 5;
+                                // 確保答案非負：先決定最終書本數量，再計算初始數量
+                                const finalBooks = Math.floor(Math.random() * 20) + 5; // 最終5-24本
+                                const b = Math.floor(Math.random() * 10) + 3; // 拿走3-12本
+                                const c = Math.floor(Math.random() * 15) + 5; // 放上5-19本
+                                const a = finalBooks + b - c; // 初始數量 = 最終數量 + 拿走 - 放上
+                                // 如果初始數量仍可能為負，則調整參數
+                                if (a <= 0) {
+                                    const adjustedA = Math.floor(Math.random() * 15) + 10; // 重新設定初始數量10-24本
+                                    const adjustedB = Math.floor(Math.random() * (adjustedA - 5)) + 1; // 拿走數量不超過初始數量-5
+                                    const adjustedC = Math.floor(Math.random() * 10) + 5; // 放上5-14本
+                                    return {
+                                        q: `書架上有 ${adjustedA} 本書，小華拿走 ${adjustedB} 本，媽媽又放上 ${adjustedC} 本，現在有幾本書？`,
+                                        a: adjustedA - adjustedB + adjustedC
+                                    };
+                                }
                                 return {
                                     q: `書架上有 ${a} 本書，小華拿走 ${b} 本，媽媽又放上 ${c} 本，現在有幾本書？`,
-                                    a: a - b + c
+                                    a: finalBooks
+                                };
+                            },
+                            () => {
+                                // 新增一個購物找零的情境，確保答案非負
+                                const price = Math.floor(Math.random() * 30) + 20; // 商品20-49元
+                                const paid = Math.ceil(price / 10) * 10; // 付款金額為price的上取整十位數
+                                const change = paid - price;
+                                return {
+                                    q: `小華買了一個 ${price} 元的玩具，付了 ${paid} 元，應該找回多少元？`,
+                                    a: change
                                 };
                             }
                         ];
