@@ -615,62 +615,47 @@
     <script>
         const AudioSystem = {
             context: null,
-
             init() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
             },
-
             playCorrect() {
                 if (!this.context) this.init();
                 const oscillator = this.context.createOscillator();
                 const gainNode = this.context.createGain();
-
                 oscillator.connect(gainNode);
                 gainNode.connect(this.context.destination);
-
                 oscillator.frequency.setValueAtTime(523.25, this.context.currentTime);
                 oscillator.frequency.setValueAtTime(659.25, this.context.currentTime + 0.1);
                 oscillator.frequency.setValueAtTime(783.99, this.context.currentTime + 0.2);
-
                 gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
-
                 oscillator.start(this.context.currentTime);
                 oscillator.stop(this.context.currentTime + 0.3);
             },
-
             playWrong() {
                 if (!this.context) this.init();
                 const oscillator = this.context.createOscillator();
                 const gainNode = this.context.createGain();
-
                 oscillator.connect(gainNode);
                 gainNode.connect(this.context.destination);
-
                 oscillator.frequency.setValueAtTime(200, this.context.currentTime);
                 oscillator.type = 'sawtooth';
-
                 gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
-
                 oscillator.start(this.context.currentTime);
                 oscillator.stop(this.context.currentTime + 0.2);
             },
-
             playComplete() {
                 if (!this.context) this.init();
                 const notes = [523.25, 587.33, 659.25, 783.99];
                 notes.forEach((freq, i) => {
                     const oscillator = this.context.createOscillator();
                     const gainNode = this.context.createGain();
-
                     oscillator.connect(gainNode);
                     gainNode.connect(this.context.destination);
-
                     oscillator.frequency.setValueAtTime(freq, this.context.currentTime + i * 0.15);
                     gainNode.gain.setValueAtTime(0.2, this.context.currentTime + i * 0.15);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + i * 0.15 + 0.3);
-
                     oscillator.start(this.context.currentTime + i * 0.15);
                     oscillator.stop(this.context.currentTime + i * 0.15 + 0.3);
                 });
@@ -685,7 +670,6 @@
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
                     let num1, num2, operator, answer;
-
                     if (isEasy) {
                         operator = Math.random() > 0.5 ? '+' : '-';
                         if (operator === '+') {
@@ -711,7 +695,6 @@
                             answer = num1 - num2;
                         }
                     }
-
                     return {
                         question: `${num1} ${operator} ${num2} = ?`,
                         answer: answer,
@@ -725,7 +708,6 @@
                 icon: '📖',
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
-
                     if (isEasy) {
                         const scenarios = [
                             (a, b) => ({
@@ -741,12 +723,10 @@
                                 a: a - b
                             })
                         ];
-
                         const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
                         const num1 = Math.floor(Math.random() * 15) + 5;
                         const num2 = Math.floor(Math.random() * num1) + 1;
                         const result = scenario(num1, num2);
-
                         return {
                             question: result.q,
                             answer: result.a,
@@ -773,9 +753,7 @@
                                 };
                             }
                         ];
-
                         const scenario = scenarios[Math.floor(Math.random() * scenarios.length)]();
-
                         return {
                             question: scenario.q,
                             answer: scenario.a,
@@ -791,7 +769,6 @@
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
                     let num1, num2;
-
                     if (isEasy) {
                         const multipliers = [2, 3, 4, 5];
                         num1 = multipliers[Math.floor(Math.random() * multipliers.length)];
@@ -800,9 +777,7 @@
                         num1 = Math.floor(Math.random() * 9) + 1;
                         num2 = Math.floor(Math.random() * 9) + 1;
                     }
-
                     const answer = num1 * num2;
-
                     return {
                         question: `${num1} × ${num2} = ?`,
                         answer: answer,
@@ -817,7 +792,6 @@
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
                     let num1, num2;
-
                     if (isEasy) {
                         num1 = Math.floor(Math.random() * 90) + 10;
                         num2 = Math.floor(Math.random() * 90) + 10;
@@ -825,12 +799,10 @@
                         num1 = Math.floor(Math.random() * 900) + 100;
                         num2 = Math.floor(Math.random() * 900) + 100;
                     }
-
                     let answer;
                     if (num1 > num2) answer = '>';
                     else if (num1 < num2) answer = '<';
                     else answer = '=';
-
                     return {
                         question: `${num1} _____ ${num2}`,
                         answer: answer,
@@ -845,20 +817,17 @@
                 icon: '💰',
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
-
                     if (isEasy) {
                         const coins = [
                             { value: 1, count: Math.floor(Math.random() * 5) },
                             { value: 5, count: Math.floor(Math.random() * 4) },
                             { value: 10, count: Math.floor(Math.random() * 3) }
                         ];
-
                         const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
                         const description = coins
                             .filter(c => c.count > 0)
                             .map(c => `${c.value}元 ${c.count} 個`)
                             .join('、');
-
                         return {
                             question: `你有 ${description}，總共有多少元？`,
                             answer: total,
@@ -872,13 +841,11 @@
                             { value: 50, count: Math.floor(Math.random() * 2) },
                             { value: 100, count: Math.floor(Math.random() * 2) }
                         ];
-
                         const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
                         const description = coins
                             .filter(c => c.count > 0)
                             .map(c => `${c.value}元 ${c.count} 個`)
                             .join('、');
-
                         return {
                             question: `你有 ${description}，總共有多少元？`,
                             answer: total,
@@ -894,7 +861,6 @@
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
                     let hour, minute, answer;
-
                     if (isEasy) {
                         hour = Math.floor(Math.random() * 12) + 1;
                         minute = Math.random() > 0.5 ? 0 : 30;
@@ -902,10 +868,8 @@
                         hour = Math.floor(Math.random() * 12) + 1;
                         minute = Math.floor(Math.random() * 12) * 5;
                     }
-
                     const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     answer = formatTime(hour, minute);
-
                     return {
                         question: '現在是幾點？',
                         answer: answer,
@@ -920,7 +884,6 @@
 
         function generateOptions(correctAnswer, range) {
             const options = [correctAnswer];
-
             while (options.length < 4) {
                 let option;
                 if (typeof correctAnswer === 'number') {
@@ -931,34 +894,27 @@
                 } else {
                     option = Math.floor(Math.random() * range);
                 }
-
                 if (!options.includes(option) && option >= 0) {
                     options.push(option);
                 }
             }
-
             return shuffleArray(options);
         }
 
         function generateTimeOptions(hour, minute, isEasy) {
             const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             const correctAnswer = formatTime(hour, minute);
-
             const options = [correctAnswer];
-
             while (options.length < 4) {
                 const h = Math.floor(Math.random() * 12) + 1;
                 const m = isEasy
                     ? (Math.random() > 0.5 ? 0 : 30)
                     : Math.floor(Math.random() * 12) * 5;
-
                 const option = formatTime(h, m);
-
                 if (!options.includes(option)) {
                     options.push(option);
                 }
             }
-
             return shuffleArray(options);
         }
 
@@ -981,7 +937,6 @@
                 const y = 50 + radius * Math.sin(angleRad);
                 numbersHtml += `<div class="clock-number" style="left: ${x}%; top: ${y}%">${i}</div>`;
             }
-
             container.innerHTML = `
                 <div class="clock-display">
                     ${numbersHtml}
@@ -997,7 +952,6 @@
                 const key = `level_${levelId}_${difficulty}`;
                 return parseInt(localStorage.getItem(key)) || 0;
             },
-
             saveRecord(levelId, difficulty, stars) {
                 const key = `level_${levelId}_${difficulty}`;
                 const current = this.getRecord(levelId, difficulty);
@@ -1012,6 +966,7 @@
             difficulty: null,
             questionIndex: 0,
             errors: 0,
+            correctCount: 0,
             totalQuestions: 10,
             questions: []
         };
@@ -1019,15 +974,12 @@
         function renderLevelMap() {
             const mapContainer = document.getElementById('levelMap');
             mapContainer.innerHTML = '';
-
             Levels.forEach(level => {
                 const easyStars = Storage.getRecord(level.id, 'easy');
                 const hardStars = Storage.getRecord(level.id, 'hard');
-
                 const card = document.createElement('div');
                 card.className = 'level-card';
                 card.onclick = () => openDifficultyModal(level.id);
-
                 card.innerHTML = `
                     <div class="level-icon">${level.icon}</div>
                     <h3>${level.name}</h3>
@@ -1042,7 +994,6 @@
                         </div>
                     </div>
                 `;
-
                 mapContainer.appendChild(card);
             });
         }
@@ -1063,16 +1014,14 @@
             gameState.difficulty = difficulty;
             gameState.questionIndex = 0;
             gameState.errors = 0;
+            gameState.correctCount = 0;
             gameState.questions = [];
-
             for (let i = 0; i < gameState.totalQuestions; i++) {
                 gameState.questions.push(gameState.currentLevel.generateQuestion(difficulty));
             }
-
             closeModal();
             document.getElementById('levelMap').style.display = 'none';
             document.getElementById('gameScreen').classList.add('active');
-
             updateGameUI();
             showQuestion();
         }
@@ -1082,7 +1031,6 @@
             document.getElementById('questionNumber').textContent = gameState.questionIndex + 1;
             document.getElementById('totalQuestions').textContent = gameState.totalQuestions;
             document.getElementById('errorCount').textContent = gameState.errors;
-
             const progress = ((gameState.questionIndex) / gameState.totalQuestions) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
         }
@@ -1092,14 +1040,11 @@
             const questionContent = document.getElementById('questionContent');
             const answersContainer = document.getElementById('answersContainer');
             const clockContainer = document.getElementById('clockContainer');
-
             questionContent.textContent = question.question;
             clockContainer.innerHTML = '';
-
             if (question.isClock) {
                 drawClock(question.hour, question.minute);
             }
-
             answersContainer.innerHTML = '';
             question.options.forEach(option => {
                 const btn = document.createElement('button');
@@ -1113,19 +1058,16 @@
         function checkAnswer(selected, btnElement) {
             const question = gameState.questions[gameState.questionIndex];
             const isCorrect = selected === question.answer;
-
             document.querySelectorAll('.answer-btn').forEach(btn => {
                 btn.disabled = true;
                 btn.style.cursor = 'not-allowed';
             });
-
             if (isCorrect) {
                 btnElement.classList.add('correct');
                 AudioSystem.playCorrect();
-
+                gameState.correctCount++;
                 setTimeout(() => {
                     gameState.questionIndex++;
-
                     if (gameState.questionIndex >= gameState.totalQuestions) {
                         endGame();
                     } else {
@@ -1137,8 +1079,14 @@
                 btnElement.classList.add('wrong');
                 AudioSystem.playWrong();
                 gameState.errors++;
-
                 document.getElementById('errorCount').textContent = gameState.errors;
+
+                // Highlight the correct answer
+                document.querySelectorAll('.answer-btn').forEach(btn => {
+                    if (btn.textContent === String(question.answer)) {
+                        btn.classList.add('correct');
+                    }
+                });
 
                 if (gameState.errors >= 3) {
                     setTimeout(() => {
@@ -1146,30 +1094,31 @@
                     }, 1000);
                 } else {
                     setTimeout(() => {
-                        showQuestion();
+                        gameState.questionIndex++;
+                        if (gameState.questionIndex >= gameState.totalQuestions) {
+                            endGame();
+                        } else {
+                            updateGameUI();
+                            showQuestion();
+                        }
                     }, 1000);
                 }
             }
         }
 
         function endGame() {
-            const correctAnswers = gameState.questionIndex;
+            const correctAnswers = gameState.correctCount;
             let stars = 0;
-
             if (gameState.errors === 0) stars = 3;
             else if (gameState.errors === 1) stars = 2;
             else if (gameState.errors === 2) stars = 1;
-
             Storage.saveRecord(gameState.currentLevel.id, gameState.difficulty, stars);
-
             document.getElementById('gameScreen').classList.remove('active');
             const resultScreen = document.getElementById('resultScreen');
             resultScreen.classList.add('active');
-
             const resultTitle = document.getElementById('resultTitle');
             const resultStars = document.getElementById('resultStars');
             const resultMessage = document.getElementById('resultMessage');
-
             if (stars === 3) {
                 resultTitle.textContent = '太棒了！完美過關！';
                 resultMessage.textContent = `你答對了全部 ${gameState.totalQuestions} 題！`;
@@ -1182,7 +1131,6 @@
                 resultTitle.textContent = '再接再厲！';
                 resultMessage.textContent = `這次答對了 ${correctAnswers} 題，下次一定會更好！`;
             }
-
             resultStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
         }
 
