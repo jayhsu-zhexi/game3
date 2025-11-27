@@ -127,6 +127,115 @@
             color: #ffd700;
         }
 
+        /* 練習區域樣式 */
+        .practice-section {
+            margin-top: 50px;
+            padding: 30px;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(255, 154, 158, 0.4);
+        }
+
+        .practice-title {
+            text-align: center;
+            color: white;
+            font-size: clamp(24px, 5vw, 32px);
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: practiceGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes practiceGlow {
+            from {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+
+            to {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.8);
+            }
+        }
+
+        .practice-map {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            justify-items: center;
+        }
+
+        .practice-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid transparent;
+            background-clip: padding-box;
+            max-width: 400px;
+        }
+
+        .practice-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 204, 0, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+
+        .practice-card:hover::before {
+            left: 100%;
+        }
+
+        .practice-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 50px rgba(255, 154, 158, 0.5);
+            border-color: #ffcc00;
+        }
+
+        .practice-card h3 {
+            font-size: clamp(22px, 4vw, 28px);
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .practice-icon {
+            font-size: clamp(50px, 10vw, 70px);
+            text-align: center;
+            margin-bottom: 20px;
+            animation: practiceFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes practiceFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-8px) rotate(5deg);
+            }
+        }
+
+        .practice-description {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: clamp(14px, 3vw, 16px);
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
         /* 難度選擇彈窗 */
         .modal {
             display: none;
@@ -553,6 +662,12 @@
         <!-- 關卡地圖 -->
         <div id="levelMap" class="level-map"></div>
 
+        <!-- 練習區域 -->
+        <div class="practice-section">
+            <h2 class="practice-title">🔥 特別練習區 🔥</h2>
+            <div id="practiceMap" class="practice-map"></div>
+        </div>
+
         <!-- 難度選擇彈窗 -->
         <div id="difficultyModal" class="modal">
             <div class="modal-content">
@@ -906,6 +1021,74 @@
             }
         ];
 
+        // 獨立的練習關卡
+        const PracticeLevels = [
+            {
+                id: 99,
+                name: '九九乘法王',
+                icon: '🔢',
+                generateQuestion: (difficulty) => {
+                    const isEasy = difficulty === 'easy';
+                    let num1, num2;
+
+                    if (isEasy) {
+                        // 簡單模式：2-5的乘法表
+                        num1 = Math.floor(Math.random() * 4) + 2;
+                        num2 = Math.floor(Math.random() * 8) + 2;
+                    } else {
+                        // 困難模式：完整九九乘法表 2-9
+                        num1 = Math.floor(Math.random() * 8) + 2;
+                        num2 = Math.floor(Math.random() * 8) + 2;
+                    }
+
+                    const answer = num1 * num2;
+
+                    // 產生更具挑戰性的選項
+                    const generateMultiplicationOptions = (correct) => {
+                        const options = [correct];
+                        const possibleAnswers = [];
+
+                        // 生成相近的乘法結果作為干擾選項
+                        for (let i = 2; i <= 9; i++) {
+                            for (let j = 2; j <= 9; j++) {
+                                const result = i * j;
+                                if (result !== correct && Math.abs(result - correct) <= 20) {
+                                    possibleAnswers.push(result);
+                                }
+                            }
+                        }
+
+                        // 隨機選擇3個不重複的干擾選項
+                        while (options.length < 4 && possibleAnswers.length > 0) {
+                            const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
+                            const option = possibleAnswers[randomIndex];
+                            if (!options.includes(option)) {
+                                options.push(option);
+                            }
+                            possibleAnswers.splice(randomIndex, 1);
+                        }
+
+                        // 如果還不夠4個選項，補充一些相近數字
+                        while (options.length < 4) {
+                            const offset = Math.floor(Math.random() * 10) + 1;
+                            const option = Math.random() > 0.5 ? correct + offset : correct - offset;
+                            if (option > 0 && !options.includes(option)) {
+                                options.push(option);
+                            }
+                        }
+
+                        return shuffleArray(options);
+                    };
+
+                    return {
+                        question: `${num1} × ${num2} = ?`,
+                        answer: answer,
+                        options: generateMultiplicationOptions(answer)
+                    };
+                }
+            }
+        ];
+
         function generateOptions(correctAnswer, range) {
             const options = [correctAnswer];
             while (options.length < 4) {
@@ -996,6 +1179,7 @@
         };
 
         function renderLevelMap() {
+            // 渲染一般關卡
             const mapContainer = document.getElementById('levelMap');
             mapContainer.innerHTML = '';
             Levels.forEach(level => {
@@ -1020,6 +1204,25 @@
                 `;
                 mapContainer.appendChild(card);
             });
+
+            // 渲染練習關卡
+            const practiceContainer = document.getElementById('practiceMap');
+            practiceContainer.innerHTML = '';
+            PracticeLevels.forEach(level => {
+                const card = document.createElement('div');
+                card.className = 'practice-card';
+                card.onclick = () => openPracticeLevel(level.id);
+                card.innerHTML = `
+                    <div class="practice-icon">${level.icon}</div>
+                    <h3>${level.name}</h3>
+                    <div class="practice-description">
+                        無限練習模式<br>
+                        💪 持續挑戰九九乘法表 💪<br>
+                        <small>無錯誤限制 • 無時間壓力</small>
+                    </div>
+                `;
+                practiceContainer.appendChild(card);
+            });
         }
 
         function openDifficultyModal(levelId) {
@@ -1030,8 +1233,151 @@
             modal.classList.add('active');
         }
 
+        function openPracticeLevel(levelId) {
+            gameState.currentLevel = PracticeLevels.find(l => l.id === levelId);
+            if (levelId === 99) { // 九九乘法王
+                startMultiplicationPractice();
+            }
+        }
+
         function closeModal() {
             document.getElementById('difficultyModal').classList.remove('active');
+        }
+
+        // 九九乘法王專用練習模式
+        function startMultiplicationPractice() {
+            gameState.difficulty = 'practice';
+            gameState.questionIndex = 0;
+            gameState.errors = 0;
+            gameState.correctCount = 0;
+            gameState.isPracticeMode = true;
+
+            // 隱藏所有主選單元素（與其他關卡一致）
+            document.getElementById('levelMap').style.display = 'none';
+            document.querySelector('.practice-section').style.display = 'none';
+            document.querySelector('.game-title').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+            updatePracticeUI();
+            generateNewMultiplicationQuestion();
+        }
+
+        function updatePracticeUI() {
+            document.getElementById('levelName').textContent = gameState.currentLevel.name + ' - 練習模式';
+            document.getElementById('questionNumber').textContent = gameState.questionIndex + 1;
+            document.getElementById('totalQuestions').textContent = '∞';
+
+            // 隱藏錯誤計數和進度條（練習模式不需要）
+            document.getElementById('errorCount').parentElement.style.display = 'none';
+            document.getElementById('progressFill').parentElement.style.display = 'none';
+        }
+
+        function generateNewMultiplicationQuestion() {
+            // 隨機選擇 2-9 的乘法表
+            const num1 = Math.floor(Math.random() * 8) + 2;
+            const num2 = Math.floor(Math.random() * 8) + 2;
+            const answer = num1 * num2;
+
+            const generateMultiplicationOptions = (correct) => {
+                const options = [correct];
+                const possibleAnswers = [];
+
+                // 生成相近的乘法結果作為干擾選項
+                for (let i = 2; i <= 9; i++) {
+                    for (let j = 2; j <= 9; j++) {
+                        const result = i * j;
+                        if (result !== correct && Math.abs(result - correct) <= 20) {
+                            possibleAnswers.push(result);
+                        }
+                    }
+                }
+
+                // 隨機選擇3個不重複的干擾選項
+                while (options.length < 4 && possibleAnswers.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
+                    const option = possibleAnswers[randomIndex];
+                    if (!options.includes(option)) {
+                        options.push(option);
+                    }
+                    possibleAnswers.splice(randomIndex, 1);
+                }
+
+                // 如果還不夠4個選項，補充一些相近數字
+                while (options.length < 4) {
+                    const offset = Math.floor(Math.random() * 10) + 1;
+                    const option = Math.random() > 0.5 ? correct + offset : correct - offset;
+                    if (option > 0 && !options.includes(option)) {
+                        options.push(option);
+                    }
+                }
+
+                return shuffleArray(options);
+            };
+
+            const currentQuestion = {
+                question: `${num1} × ${num2} = ?`,
+                answer: answer,
+                options: generateMultiplicationOptions(answer)
+            };
+
+            showPracticeQuestion(currentQuestion);
+        }
+
+        function showPracticeQuestion(question) {
+            const questionContent = document.getElementById('questionContent');
+            const answersContainer = document.getElementById('answersContainer');
+            const clockContainer = document.getElementById('clockContainer');
+
+            questionContent.textContent = question.question;
+            clockContainer.innerHTML = '';
+            answersContainer.innerHTML = '';
+
+            question.options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = option;
+                btn.onclick = () => checkPracticeAnswer(option, btn, question.answer);
+                answersContainer.appendChild(btn);
+            });
+        }
+
+        function checkPracticeAnswer(selected, btnElement, correctAnswer) {
+            const isCorrect = selected === correctAnswer;
+
+            // 禁用所有按鈕
+            document.querySelectorAll('.answer-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+            });
+
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                AudioSystem.playCorrect();
+                gameState.correctCount++;
+                gameState.questionIndex++;
+
+                // 1秒後自動進入下一題
+                setTimeout(() => {
+                    updatePracticeUI();
+                    generateNewMultiplicationQuestion();
+                }, 1000);
+            } else {
+                btnElement.classList.add('wrong');
+                AudioSystem.playWrong();
+
+                // 高亮顯示正確答案
+                document.querySelectorAll('.answer-btn').forEach(btn => {
+                    if (btn.textContent === String(correctAnswer)) {
+                        btn.classList.add('correct');
+                    }
+                });
+
+                // 2秒後自動進入下一題（給更多時間查看正確答案）
+                setTimeout(() => {
+                    gameState.questionIndex++;
+                    updatePracticeUI();
+                    generateNewMultiplicationQuestion();
+                }, 2000);
+            }
         }
 
         function startGame(difficulty) {
@@ -1044,7 +1390,11 @@
                 gameState.questions.push(gameState.currentLevel.generateQuestion(difficulty));
             }
             closeModal();
+
+            // 隱藏所有主選單元素
             document.getElementById('levelMap').style.display = 'none';
+            document.querySelector('.practice-section').style.display = 'none';
+            document.querySelector('.game-title').style.display = 'none';
             document.getElementById('gameScreen').classList.add('active');
             updateGameUI();
             showQuestion();
@@ -1174,6 +1524,8 @@
             document.getElementById('resultScreen').classList.remove('active');
             document.getElementById('levelMap').style.display = 'grid';
             renderLevelMap();
+            document.querySelector('.practice-section').style.display = 'block';
+            document.querySelector('.game-title').style.display = 'block';
         }
 
         window.onload = () => {
