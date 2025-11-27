@@ -982,20 +982,8 @@
                                 const total = sectionA + sectionB + sectionC;
 
                                 return {
-                                    q: `農夫在菜園裡種了 ${sectionA} 根蘿蔔， ${sectionB} 根蘿蔔，還有 ${sectionC} 根玉米，農夫總共種了多少根蘿蔔？`,
+                                    q: `農夫在菜園裡種了 ${sectionA} 根蘿蔔， ${sectionB} 條地瓜，還有 ${sectionC} 根玉米，農夫總共種了多少根作物？`,
                                     a: total
-                                };
-                            },
-                            // 新增題目 6: 倒推法求初始數量 (Final + b + c)
-                            () => {
-                                const finalCount = Math.floor(Math.random() * 15) + 10;
-                                const eaten = Math.floor(Math.random() * 8) + 3;
-                                const givenAway = Math.floor(Math.random() * 7) + 2;
-                                const initialCount = finalCount + eaten + givenAway;
-
-                                return {
-                                    q: `冰箱裡原本有幾顆雞蛋？媽媽拿走了 ${eaten} 顆做早餐，爸爸又拿走了 ${givenAway} 顆做點心，最後冰箱裡剩下 ${finalCount} 顆。請問原本有多少顆雞蛋？`,
-                                    a: initialCount
                                 };
                             }
                         ];
