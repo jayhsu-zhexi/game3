@@ -454,6 +454,16 @@
             line-height: 20px;
             margin-top: -10px;
             margin-left: -10px;
+            z-index: 5;
+        }
+
+        .clock-tick {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            background: #333;
+            transform-origin: 50% 50%;
         }
 
         .answers-grid {
@@ -837,7 +847,6 @@
                                 q: `籃子裡有 ${a} 顆蘋果，小華吃掉 ${b} 顆，還剩下幾顆蘋果？`,
                                 a: a - b
                             }),
-                            // --- 加法情境 (Addition) ---
                             (a, b) => ({
                                 q: `書架上原本有 ${a} 本故事書，爸爸又買了 ${b} 本給小明，現在書架上共有幾本書？`,
                                 a: a + b
@@ -854,8 +863,6 @@
                                 q: `停車場裡停了 ${a} 輛紅色汽車和 ${b} 輛藍色汽車，停車場裡總共有幾輛車？`,
                                 a: a + b
                             }),
-
-                            // --- 減法情境 (Subtraction) ---
                             (a, b) => ({
                                 q: `停車場原本有 ${a} 輛車，開走了 ${b} 輛，現在停車場還剩下幾輛車？`,
                                 a: a - b
@@ -885,27 +892,24 @@
                     } else {
                         const scenarios = [
                             () => {
-                                // 確保答案非負：先決定剩餘金額，再計算總金額
-                                const remaining = Math.floor(Math.random() * 15) + 5; // 剩餘5-19元
-                                const b = Math.floor(Math.random() * 15) + 5; // 麵包5-19元
-                                const c = Math.floor(Math.random() * 10) + 5; // 飲料5-14元
-                                const a = remaining + b + c; // 總金額 = 剩餘 + 花費
+                                const remaining = Math.floor(Math.random() * 15) + 5;
+                                const b = Math.floor(Math.random() * 15) + 5;
+                                const c = Math.floor(Math.random() * 10) + 5;
+                                const a = remaining + b + c;
                                 return {
                                     q: `小明有 ${a} 元，買了一個 ${b} 元的麵包，又買了一瓶 ${c} 元的飲料，還剩下多少元？`,
                                     a: remaining
                                 };
                             },
                             () => {
-                                // 確保答案非負：先決定最終書本數量，再計算初始數量
-                                const finalBooks = Math.floor(Math.random() * 20) + 5; // 最終5-24本
-                                const b = Math.floor(Math.random() * 10) + 3; // 拿走3-12本
-                                const c = Math.floor(Math.random() * 15) + 5; // 放上5-19本
-                                const a = finalBooks + b - c; // 初始數量 = 最終數量 + 拿走 - 放上
-                                // 如果初始數量仍可能為負，則調整參數
+                                const finalBooks = Math.floor(Math.random() * 20) + 5;
+                                const b = Math.floor(Math.random() * 10) + 3;
+                                const c = Math.floor(Math.random() * 15) + 5;
+                                const a = finalBooks + b - c;
                                 if (a <= 0) {
-                                    const adjustedA = Math.floor(Math.random() * 15) + 10; // 重新設定初始數量10-24本
-                                    const adjustedB = Math.floor(Math.random() * (adjustedA - 5)) + 1; // 拿走數量不超過初始數量-5
-                                    const adjustedC = Math.floor(Math.random() * 10) + 5; // 放上5-14本
+                                    const adjustedA = Math.floor(Math.random() * 15) + 10;
+                                    const adjustedB = Math.floor(Math.random() * (adjustedA - 5)) + 1;
+                                    const adjustedC = Math.floor(Math.random() * 10) + 5;
                                     return {
                                         q: `書架上有 ${adjustedA} 本書，小華拿走 ${adjustedB} 本，媽媽又放上 ${adjustedC} 本，現在有幾本書？`,
                                         a: adjustedA - adjustedB + adjustedC
@@ -917,16 +921,14 @@
                                 };
                             },
                             () => {
-                                // 新增一個購物找零的情境，確保答案非負
-                                const price = Math.floor(Math.random() * 30) + 20; // 商品20-49元
-                                const paid = Math.ceil(price / 10) * 10; // 付款金額為price的上取整十位數
+                                const price = Math.floor(Math.random() * 30) + 20;
+                                const paid = Math.ceil(price / 10) * 10;
                                 const change = paid - price;
                                 return {
                                     q: `小華買了一個 ${price} 元的玩具，付了 ${paid} 元，應該找回多少元？`,
                                     a: change
                                 };
                             },
-                            // 您的原有題目 1: 連續消費 (a - b - c)
                             () => {
                                 const remaining = Math.floor(Math.random() * 15) + 5;
                                 const b = Math.floor(Math.random() * 15) + 5;
@@ -937,22 +939,17 @@
                                     a: remaining
                                 };
                             },
-                            // 您的原有題目 2: 加減混合 (a - b + c) 或倒推
                             () => {
                                 const finalBooks = Math.floor(Math.random() * 20) + 5;
                                 const b = Math.floor(Math.random() * 10) + 3;
                                 const c = Math.floor(Math.random() * 15) + 5;
-
-                                // 確保 a > 0
-                                const a = Math.max(finalBooks + b - c, 10); // 確保初始數量至少為10
+                                const a = Math.max(finalBooks + b - c, 10);
                                 const actualFinal = a - b + c;
-
                                 return {
                                     q: `書架上有 ${a} 本書，小華拿走 ${b} 本，媽媽又放上 ${c} 本，現在有幾本書？`,
                                     a: actualFinal
                                 };
                             },
-                            // 您的原有題目 3: 購物找零 (paid - price)
                             () => {
                                 const price = Math.floor(Math.random() * 30) + 20;
                                 const paid = Math.ceil(price / 10) * 10;
@@ -962,25 +959,21 @@
                                     a: change
                                 };
                             },
-                            // 新增題目 4: 氣球與鳥類的加減混合 (a - b + c)
                             () => {
                                 const initial = Math.floor(Math.random() * 20) + 15;
                                 const firstLoss = Math.floor(Math.random() * 8) + 2;
                                 const secondGain = Math.floor(Math.random() * 10) + 5;
                                 const finalAmount = initial - firstLoss + secondGain;
-
                                 return {
                                     q: `公園裡原本有 ${initial} 隻鴿子，飛走了 ${firstLoss} 隻，後來又飛來了 ${secondGain} 隻，現在公園裡還有幾隻鴿子？`,
                                     a: finalAmount
                                 };
                             },
-                            // 新增題目 5: 蔬菜的連加 (a + b + c)
                             () => {
                                 const sectionA = Math.floor(Math.random() * 15) + 10;
                                 const sectionB = Math.floor(Math.random() * 10) + 5;
                                 const sectionC = Math.floor(Math.random() * 10) + 5;
                                 const total = sectionA + sectionB + sectionC;
-
                                 return {
                                     q: `農夫在菜園裡種了 ${sectionA} 根蘿蔔， ${sectionB} 條地瓜，還有 ${sectionC} 根玉米，農夫總共種了多少根作物？`,
                                     a: total
@@ -1096,11 +1089,13 @@
                     const isEasy = difficulty === 'easy';
                     let hour, minute, answer;
                     if (isEasy) {
-                        hour = Math.floor(Math.random() * 12) + 1;
-                        minute = Math.random() > 0.5 ? 0 : 30;
-                    } else {
+                        // Easy mode: 5-minute intervals
                         hour = Math.floor(Math.random() * 12) + 1;
                         minute = Math.floor(Math.random() * 12) * 5;
+                    } else {
+                        // Hard mode: 1-minute intervals
+                        hour = Math.floor(Math.random() * 12) + 1;
+                        minute = Math.floor(Math.random() * 60);
                     }
                     const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     answer = formatTime(hour, minute);
@@ -1209,9 +1204,14 @@
             const options = [correctAnswer];
             while (options.length < 4) {
                 const h = Math.floor(Math.random() * 12) + 1;
-                const m = isEasy
-                    ? (Math.random() > 0.5 ? 0 : 30)
-                    : Math.floor(Math.random() * 12) * 5;
+                let m;
+                if (isEasy) {
+                    // Easy options: multiples of 5
+                    m = Math.floor(Math.random() * 12) * 5;
+                } else {
+                    // Hard options: any minute
+                    m = Math.floor(Math.random() * 60);
+                }
                 const option = formatTime(h, m);
                 if (!options.includes(option)) {
                     options.push(option);
@@ -1231,16 +1231,42 @@
 
         function drawClock(hour, minute) {
             const container = document.getElementById('clockContainer');
+            let ticksHtml = '';
+            for (let i = 0; i < 60; i++) {
+                const isHour = i % 5 === 0;
+                const h = isHour ? 10 : 5; // px
+                const w = isHour ? 2 : 1; // px
+                const angle = i * 6;
+
+                ticksHtml += `<div style="
+                    position: absolute;
+                    top: 0;
+                    left: 50%;
+                    width: ${w}px;
+                    height: 50%;
+                    transform-origin: bottom center;
+                    transform: translateX(-50%) rotate(${angle}deg);
+                    pointer-events: none;
+                ">
+                    <div style="
+                        width: 100%;
+                        height: ${isHour ? 15 : 8}%;
+                        background: #333;
+                    "></div>
+                </div>`;
+            }
+
             let numbersHtml = '';
             for (let i = 1; i <= 12; i++) {
                 const angleRad = (i * 30 - 90) * (Math.PI / 180);
-                const radius = 40;
+                const radius = 38;
                 const x = 50 + radius * Math.cos(angleRad);
                 const y = 50 + radius * Math.sin(angleRad);
                 numbersHtml += `<div class="clock-number" style="left: ${x}%; top: ${y}%">${i}</div>`;
             }
             container.innerHTML = `
                 <div class="clock-display">
+                    ${ticksHtml}
                     ${numbersHtml}
                     <div class="clock-center"></div>
                     <div class="clock-hand hour-hand" style="transform: rotate(${(hour % 12) * 30 + minute * 0.5}deg)"></div>
