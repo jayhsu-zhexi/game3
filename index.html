@@ -1202,16 +1202,36 @@
             const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             const correctAnswer = formatTime(hour, minute);
             const options = [correctAnswer];
-            while (options.length < 4) {
-                const h = Math.floor(Math.random() * 12) + 1;
+            while (options.length < 6) {
+                // 步驟 1: 讓小時 h 接近答案 hour (+- 1 小時)
+                let h;
+                const hourRange = 1; // 接近範圍：+- 1 小時
+
+                // 在 [hour - 1, hour + 1] 範圍內隨機生成小時 (但需考慮 12 小時制)
+                const minH = hour - hourRange;
+                const maxH = hour + hourRange;
+
+                // 隨機在 minH 到 maxH 之間生成 h
+                h = Math.floor(Math.random() * (maxH - minH + 1)) + minH;
+
+                // 處理 h 超出 1-12 範圍的情況，例如 12 + 1 = 1， 1 - 1 = 12
+                h = (h < 1) ? 12 : (h > 12) ? 1 : h;
+
+                // 步驟 2: 讓分鐘 m 接近答案 minute (+- 15 分鐘)
                 let m;
+                const minuteRange = 3;
+                const minM = Math.max(0, minute - minuteRange);
+                const maxM = Math.min(59, minute + minuteRange);
+
                 if (isEasy) {
-                    // Easy options: multiples of 5
-                    m = Math.floor(Math.random() * 12) * 5;
+                    // 在接近範圍內生成 5 的倍數
+                    m = Math.floor(Math.random() * ((maxM - minM) / 5 + 1)) * 5 + minM;
+                    m = Math.round(m / 5) * 5;
                 } else {
-                    // Hard options: any minute
-                    m = Math.floor(Math.random() * 60);
+                    // 在接近範圍內生成任意分鐘
+                    m = Math.floor(Math.random() * (maxM - minM + 1)) + minM;
                 }
+
                 const option = formatTime(h, m);
                 if (!options.includes(option)) {
                     options.push(option);
