@@ -39,6 +39,25 @@
             animation: titleFloat 3s ease-in-out infinite;
         }
 
+        .coin-tag {
+            display: inline-block;
+            background: #ffd700;
+            color: #8b4513;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #daa520;
+        }
+
+        .coin-container {
+            margin: 15px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
         @keyframes titleFloat {
 
             0%,
@@ -398,7 +417,7 @@
         }
 
         /* 時鐘顯示 */
-        .clock-display {
+        .clock-canvas {
             width: clamp(150px, 40vw, 250px);
             height: clamp(150px, 40vw, 250px);
             border: 8px solid #333;
@@ -1053,10 +1072,11 @@
                         const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
                         const description = coins
                             .filter(c => c.count > 0)
-                            .map(c => `${c.count} 個 ${c.value}元`)
-                            .join('、');
+                            .map(c => `<span class="coin-tag">${c.count}個${c.value}元</span>`)
+                            .join('');
                         return {
-                            question: `你有 ${description}，總共有多少元？`,
+                            question: `你有這些錢，總共有多少元？`,
+                            coinsHtml: description,
                             answer: total,
                             options: generateOptions(total, 50)
                         };
@@ -1071,10 +1091,11 @@
                         const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
                         const description = coins
                             .filter(c => c.count > 0)
-                            .map(c => `${c.count} 個 ${c.value}元`)
-                            .join('、');
+                            .map(c => `<span class="coin-tag">${c.count}個${c.value}元</span>`)
+                            .join('');
                         return {
-                            question: `你有 ${description}，總共有多少元？`,
+                            question: `你有這些錢，總共有多少元？`,
+                            coinsHtml: description,
                             answer: total,
                             options: generateOptions(total, 300)
                         };
@@ -1250,7 +1271,8 @@
         }
 
         function drawClock(hour, minute) {
-            const container = document.getElementById('clockContainer');
+            const container = document.getElementById('clockContainerInner');
+            if (!container) return;
             let ticksHtml = '';
             for (let i = 0; i < 60; i++) {
                 const isHour = i % 5 === 0;
@@ -1285,13 +1307,11 @@
                 numbersHtml += `<div class="clock-number" style="left: ${x}%; top: ${y}%">${i}</div>`;
             }
             container.innerHTML = `
-                <div class="clock-display">
-                    ${ticksHtml}
-                    ${numbersHtml}
-                    <div class="clock-center"></div>
-                    <div class="clock-hand hour-hand" style="transform: rotate(${(hour % 12) * 30 + minute * 0.5}deg)"></div>
-                    <div class="clock-hand minute-hand" style="transform: rotate(${minute * 6}deg)"></div>
-                </div>
+                ${ticksHtml}
+                ${numbersHtml}
+                <div class="clock-center"></div>
+                <div class="clock-hand hour-hand" style="transform: rotate(${(hour % 12) * 30 + minute * 0.5}deg)"></div>
+                <div class="clock-hand minute-hand" style="transform: rotate(${minute * 6}deg)"></div>
             `;
         }
 
@@ -1557,7 +1577,18 @@
             const clockContainer = document.getElementById('clockContainer');
             questionContent.textContent = question.question;
             clockContainer.innerHTML = '';
+            // Handle coin visualization
+            if (question.coinsHtml) {
+                const coinDiv = document.createElement('div');
+                coinDiv.className = 'coin-container';
+                coinDiv.innerHTML = question.coinsHtml;
+                clockContainer.appendChild(coinDiv);
+            }
             if (question.isClock) {
+                const clockDiv = document.createElement('div');
+                clockDiv.id = 'clockContainerInner';
+                clockDiv.className = 'clock-canvas';
+                clockContainer.appendChild(clockDiv);
                 drawClock(question.hour, question.minute);
             }
             answersContainer.innerHTML = '';
