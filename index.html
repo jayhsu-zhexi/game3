@@ -480,9 +480,13 @@
             position: absolute;
             top: 0;
             left: 50%;
-            width: 2px;
+            transform-origin: bottom center;
+            pointer-events: none;
+        }
+
+        .clock-tick-inner {
+            width: 100%;
             background: #333;
-            transform-origin: 50% 50%;
         }
 
         .answers-grid {
@@ -757,6 +761,63 @@
     </div>
 
     <script>
+        const Utils = {
+            shuffleArray(array) {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
+            },
+            generateOptions(correctAnswer, range) {
+                const options = [correctAnswer];
+                while (options.length < 4) {
+                    let option;
+                    if (typeof correctAnswer === 'number') {
+                        const offset = Math.floor(Math.random() * 20) - 10;
+                        option = correctAnswer + offset;
+                        if (option < 0) option = Math.abs(option);
+                        if (option > range) option = option % range;
+                    } else {
+                        option = Math.floor(Math.random() * range);
+                    }
+                    if (!options.includes(option) && option >= 0) {
+                        options.push(option);
+                    }
+                }
+                return this.shuffleArray(options);
+            },
+            generateMultiplicationOptions(correct) {
+                const options = [correct];
+                const possibleAnswers = [];
+                for (let i = 2; i <= 9; i++) {
+                    for (let j = 2; j <= 9; j++) {
+                        const result = i * j;
+                        if (result !== correct && Math.abs(result - correct) <= 20) {
+                            possibleAnswers.push(result);
+                        }
+                    }
+                }
+                while (options.length < 4 && possibleAnswers.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
+                    const option = possibleAnswers[randomIndex];
+                    if (!options.includes(option)) {
+                        options.push(option);
+                    }
+                    possibleAnswers.splice(randomIndex, 1);
+                }
+                while (options.length < 4) {
+                    const offset = Math.floor(Math.random() * 10) + 1;
+                    const option = Math.random() > 0.5 ? correct + offset : correct - offset;
+                    if (option > 0 && !options.includes(option)) {
+                        options.push(option);
+                    }
+                }
+                return this.shuffleArray(options);
+            }
+        };
+
         const AudioSystem = {
             context: null,
             init() {
@@ -842,7 +903,7 @@
                     return {
                         question: `${num1} ${operator} ${num2} = ?`,
                         answer: answer,
-                        options: generateOptions(answer, isEasy ? 10 : 100)
+                        options: Utils.generateOptions(answer, isEasy ? 10 : 100)
                     };
                 }
             },
@@ -906,7 +967,7 @@
                         return {
                             question: result.q,
                             answer: result.a,
-                            options: generateOptions(result.a, 20)
+                            options: Utils.generateOptions(result.a, 20)
                         };
                     } else {
                         const scenarios = [
@@ -1003,7 +1064,7 @@
                         return {
                             question: scenario.q,
                             answer: scenario.a,
-                            options: generateOptions(scenario.a, 50)
+                            options: Utils.generateOptions(scenario.a, 50)
                         };
                     }
                 }
@@ -1027,7 +1088,7 @@
                     return {
                         question: `${num1} × ${num2} = ?`,
                         answer: answer,
-                        options: generateOptions(answer, isEasy ? 50 : 81)
+                        options: Utils.generateOptions(answer, isEasy ? 50 : 81)
                     };
                 }
             },
@@ -1078,7 +1139,7 @@
                             question: `你有這些錢，總共有多少元？`,
                             coinsHtml: description,
                             answer: total,
-                            options: generateOptions(total, 50)
+                            options: Utils.generateOptions(total, 50)
                         };
                     } else {
                         const coins = [
@@ -1097,7 +1158,7 @@
                             question: `你有這些錢，總共有多少元？`,
                             coinsHtml: description,
                             answer: total,
-                            options: generateOptions(total, 300)
+                            options: Utils.generateOptions(total, 300)
                         };
                     }
                 }
@@ -1155,69 +1216,14 @@
                     const answer = num1 * num2;
 
                     // 產生更具挑戰性的選項
-                    const generateMultiplicationOptions = (correct) => {
-                        const options = [correct];
-                        const possibleAnswers = [];
-
-                        // 生成相近的乘法結果作為干擾選項
-                        for (let i = 2; i <= 9; i++) {
-                            for (let j = 2; j <= 9; j++) {
-                                const result = i * j;
-                                if (result !== correct && Math.abs(result - correct) <= 20) {
-                                    possibleAnswers.push(result);
-                                }
-                            }
-                        }
-
-                        // 隨機選擇3個不重複的干擾選項
-                        while (options.length < 4 && possibleAnswers.length > 0) {
-                            const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
-                            const option = possibleAnswers[randomIndex];
-                            if (!options.includes(option)) {
-                                options.push(option);
-                            }
-                            possibleAnswers.splice(randomIndex, 1);
-                        }
-
-                        // 如果還不夠4個選項，補充一些相近數字
-                        while (options.length < 4) {
-                            const offset = Math.floor(Math.random() * 10) + 1;
-                            const option = Math.random() > 0.5 ? correct + offset : correct - offset;
-                            if (option > 0 && !options.includes(option)) {
-                                options.push(option);
-                            }
-                        }
-
-                        return shuffleArray(options);
-                    };
-
                     return {
                         question: `${num1} × ${num2} = ?`,
                         answer: answer,
-                        options: generateMultiplicationOptions(answer)
+                        options: Utils.generateMultiplicationOptions(answer)
                     };
                 }
             }
         ];
-
-        function generateOptions(correctAnswer, range) {
-            const options = [correctAnswer];
-            while (options.length < 4) {
-                let option;
-                if (typeof correctAnswer === 'number') {
-                    const offset = Math.floor(Math.random() * 20) - 10;
-                    option = correctAnswer + offset;
-                    if (option < 0) option = Math.abs(option);
-                    if (option > range) option = option % range;
-                } else {
-                    option = Math.floor(Math.random() * range);
-                }
-                if (!options.includes(option) && option >= 0) {
-                    options.push(option);
-                }
-            }
-            return shuffleArray(options);
-        }
 
         function generateTimeOptions(hour, minute, isEasy) {
             const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -1258,16 +1264,7 @@
                     options.push(option);
                 }
             }
-            return shuffleArray(options);
-        }
-
-        function shuffleArray(array) {
-            const newArray = [...array];
-            for (let i = newArray.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-            }
-            return newArray;
+            return Utils.shuffleArray(options);
         }
 
         function drawClock(hour, minute) {
@@ -1276,25 +1273,12 @@
             let ticksHtml = '';
             for (let i = 0; i < 60; i++) {
                 const isHour = i % 5 === 0;
-                const h = isHour ? 10 : 5; // px
+                const h = isHour ? 15 : 8; // %
                 const w = isHour ? 2 : 1; // px
                 const angle = i * 6;
 
-                ticksHtml += `<div style="
-                    position: absolute;
-                    top: 0;
-                    left: 50%;
-                    width: ${w}px;
-                    height: 50%;
-                    transform-origin: bottom center;
-                    transform: translateX(-50%) rotate(${angle}deg);
-                    pointer-events: none;
-                ">
-                    <div style="
-                        width: 100%;
-                        height: ${isHour ? 15 : 8}%;
-                        background: #333;
-                    "></div>
+                ticksHtml += `<div class="clock-tick" style="width: ${w}px; height: 50%; transform: translateX(-50%) rotate(${angle}deg);">
+                    <div class="clock-tick-inner" style="height: ${h}%;"></div>
                 </div>`;
             }
 
@@ -1438,46 +1422,10 @@
             const num2 = Math.floor(Math.random() * 8) + 2;
             const answer = num1 * num2;
 
-            const generateMultiplicationOptions = (correct) => {
-                const options = [correct];
-                const possibleAnswers = [];
-
-                // 生成相近的乘法結果作為干擾選項
-                for (let i = 2; i <= 9; i++) {
-                    for (let j = 2; j <= 9; j++) {
-                        const result = i * j;
-                        if (result !== correct && Math.abs(result - correct) <= 20) {
-                            possibleAnswers.push(result);
-                        }
-                    }
-                }
-
-                // 隨機選擇3個不重複的干擾選項
-                while (options.length < 4 && possibleAnswers.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * possibleAnswers.length);
-                    const option = possibleAnswers[randomIndex];
-                    if (!options.includes(option)) {
-                        options.push(option);
-                    }
-                    possibleAnswers.splice(randomIndex, 1);
-                }
-
-                // 如果還不夠4個選項，補充一些相近數字
-                while (options.length < 4) {
-                    const offset = Math.floor(Math.random() * 10) + 1;
-                    const option = Math.random() > 0.5 ? correct + offset : correct - offset;
-                    if (option > 0 && !options.includes(option)) {
-                        options.push(option);
-                    }
-                }
-
-                return shuffleArray(options);
-            };
-
             const currentQuestion = {
                 question: `${num1} × ${num2} = ?`,
                 answer: answer,
-                options: generateMultiplicationOptions(answer)
+                options: Utils.generateMultiplicationOptions(answer)
             };
 
             showPracticeQuestion(currentQuestion);
