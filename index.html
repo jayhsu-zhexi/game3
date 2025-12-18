@@ -731,13 +731,13 @@
             <div class="modal-content">
                 <h2 id="modalTitle">選擇難度</h2>
                 <div class="difficulty-buttons">
-                    <button class="difficulty-btn easy" onclick="startGame('easy')">
+                    <button class="difficulty-btn easy" onclick="GameEngine.startLevel(GameEngine.state.currentLevel.id, 'easy')">
                         🌱 簡單模式
                     </button>
-                    <button class="difficulty-btn hard" onclick="startGame('hard')">
+                    <button class="difficulty-btn hard" onclick="GameEngine.startLevel(GameEngine.state.currentLevel.id, 'hard')">
                         🔥 困難模式
                     </button>
-                    <button class="difficulty-btn close-modal" onclick="closeModal()">
+                    <button class="difficulty-btn close-modal" onclick="UIManager.closeModal()">
                         取消
                     </button>
                 </div>
@@ -758,7 +758,7 @@
                         錯誤: <span id="errorCount">0</span>/3
                     </div>
                 </div>
-                <button class="back-btn" onclick="exitGame()">返回地圖</button>
+                <button class="back-btn" onclick="UIManager.confirmExit()">返回地圖</button>
             </div>
 
             <div class="progress-bar">
@@ -779,8 +779,8 @@
             <div id="resultStars" class="result-stars"></div>
             <div id="resultMessage" class="result-message"></div>
             <div class="result-buttons">
-                <button class="result-btn retry-btn" onclick="retryLevel()">再玩一次</button>
-                <button class="result-btn home-btn" onclick="backToMap()">返回地圖</button>
+                <button class="result-btn retry-btn" onclick="GameEngine.retryLevel()">再玩一次</button>
+                <button class="result-btn home-btn" onclick="GameEngine.backToMap()">返回地圖</button>
             </div>
         </div>
     </div>
@@ -1368,344 +1368,351 @@
             }
         };
 
-        let gameState = {
-            currentLevel: null,
-            difficulty: null,
-            questionIndex: 0,
-            errors: 0,
-            correctCount: 0,
-            totalQuestions: 10,
-            questions: []
+        const GameEngine = {
+            state: {
+                currentLevel: null,
+                difficulty: null,
+                questionIndex: 0,
+                errors: 0,
+                correctCount: 0,
+                totalQuestions: 10,
+                questions: [],
+                isPracticeMode: false
+            },
+
+            init() {
+                AudioSystem.init();
+                UIManager.renderLevelMap();
+            },
+
+            startLevel(levelId, difficulty) {
+                const level = Levels.find(l => l.id === levelId);
+                if (!level) return;
+
+                UIManager.closeModal();
+
+                this.state = {
+                    currentLevel: level,
+                    difficulty: difficulty,
+                    questionIndex: 0,
+                    errors: 0,
+                    correctCount: 0,
+                    totalQuestions: 10,
+                    questions: [],
+                    isPracticeMode: false
+                };
+
+                for (let i = 0; i < this.state.totalQuestions; i++) {
+                    this.state.questions.push(level.generateQuestion(difficulty));
+                }
+
+                UIManager.showScreen('game');
+                UIManager.updateGameUI();
+                this.showQuestion();
+            },
+
+            startPractice(levelId) {
+                const level = PracticeLevels.find(l => l.id === levelId);
+                if (!level) return;
+
+                this.state = {
+                    currentLevel: level,
+                    difficulty: 'practice',
+                    questionIndex: 0,
+                    errors: 0,
+                    correctCount: 0,
+                    totalQuestions: Infinity,
+                    questions: [],
+                    isPracticeMode: true,
+                    lastPracticeQuestion: null
+                };
+
+                UIManager.showScreen('game');
+                UIManager.updatePracticeUI();
+                this.generateNewPracticeQuestion();
+            },
+
+            showQuestion() {
+                const question = this.state.questions[this.state.questionIndex];
+                UIManager.renderQuestion(question, (selected, btn) => this.checkAnswer(selected, btn));
+            },
+
+            checkAnswer(selected, btnElement) {
+                const currentQuestion = this.state.isPracticeMode 
+                    ? this.state.lastPracticeQuestion
+                    : this.state.questions[this.state.questionIndex];
+                
+                const isCorrect = selected === currentQuestion.answer;
+                this.handleAnswer(isCorrect, selected, currentQuestion.answer, btnElement);
+            },
+
+            generateNewPracticeQuestion() {
+                const question = this.state.currentLevel.generateQuestion(this.state.difficulty);
+                this.state.lastPracticeQuestion = question;
+                UIManager.renderQuestion(question, (selected, btn) => this.checkAnswer(selected, btn));
+            },
+
+            handleAnswer(isCorrect, selected, correctAnswer, btnElement) {
+                UIManager.disableAnswerButtons();
+
+                if (isCorrect) {
+                    btnElement.classList.add('correct');
+                    AudioSystem.playCorrect();
+                    this.state.correctCount++;
+                    
+                    setTimeout(() => {
+                        this.nextQuestion();
+                    }, 1000);
+                } else {
+                    btnElement.classList.add('wrong');
+                    AudioSystem.playWrong();
+                    this.state.errors++;
+                    UIManager.updateErrorCount(this.state.errors);
+                    UIManager.highlightCorrectAnswer(correctAnswer);
+
+                    if (!this.state.isPracticeMode && this.state.errors >= 3) {
+                        setTimeout(() => this.endGame(), 1000);
+                    } else {
+                        setTimeout(() => this.nextQuestion(), this.state.isPracticeMode ? 2000 : 1000);
+                    }
+                }
+            },
+
+            nextQuestion() {
+                this.state.questionIndex++;
+                if (!this.state.isPracticeMode && this.state.questionIndex >= this.state.totalQuestions) {
+                    this.endGame();
+                } else {
+                    if (this.state.isPracticeMode) {
+                        UIManager.updatePracticeUI();
+                        this.generateNewPracticeQuestion();
+                    } else {
+                        UIManager.updateGameUI();
+                        this.showQuestion();
+                    }
+                }
+            },
+
+            endGame() {
+                const stars = this.calculateStars();
+                Storage.saveRecord(this.state.currentLevel.id, this.state.difficulty, stars);
+                UIManager.showResult(stars, this.state.correctCount, this.state.totalQuestions);
+            },
+
+            calculateStars() {
+                if (this.state.errors === 0) return 3;
+                if (this.state.errors === 1) return 2;
+                if (this.state.errors === 2) return 1;
+                return 0;
+            },
+
+            retryLevel() {
+                UIManager.hideResult();
+                this.startLevel(this.state.currentLevel.id, this.state.difficulty);
+            },
+
+            backToMap() {
+                UIManager.showScreen('map');
+            }
         };
 
-        function renderLevelMap() {
-            // 渲染一般關卡
-            const mapContainer = document.getElementById('levelMap');
-            mapContainer.innerHTML = '';
-            Levels.forEach(level => {
-                const easyStars = Storage.getRecord(level.id, 'easy');
-                const hardStars = Storage.getRecord(level.id, 'hard');
-                const card = document.createElement('div');
-                card.className = 'level-card';
-                card.onclick = () => openDifficultyModal(level.id);
-                card.innerHTML = `
-                    <div class="level-icon">${level.icon}</div>
-                    <h3>${level.name}</h3>
-                    <div class="level-records">
-                        <div class="record-item">
-                            <div class="label">簡單</div>
-                            <div class="stars">${'⭐'.repeat(easyStars)}${'☆'.repeat(3 - easyStars)}</div>
+        const UIManager = {
+            renderLevelMap() {
+                const mapContainer = document.getElementById('levelMap');
+                mapContainer.innerHTML = '';
+                Levels.forEach(level => {
+                    const easyStars = Storage.getRecord(level.id, 'easy');
+                    const hardStars = Storage.getRecord(level.id, 'hard');
+                    const card = document.createElement('div');
+                    card.className = 'level-card';
+                    card.onclick = () => this.openDifficultyModal(level.id);
+                    card.innerHTML = `
+                        <div class="level-icon">${level.icon}</div>
+                        <h3>${level.name}</h3>
+                        <div class="level-records">
+                            <div class="record-item">
+                                <div class="label">簡單</div>
+                                <div class="stars">${'⭐'.repeat(easyStars)}${'☆'.repeat(3 - easyStars)}</div>
+                            </div>
+                            <div class="record-item">
+                                <div class="label">困難</div>
+                                <div class="stars">${'⭐'.repeat(hardStars)}${'☆'.repeat(3 - hardStars)}</div>
+                            </div>
                         </div>
-                        <div class="record-item">
-                            <div class="label">困難</div>
-                            <div class="stars">${'⭐'.repeat(hardStars)}${'☆'.repeat(3 - hardStars)}</div>
+                    `;
+                    mapContainer.appendChild(card);
+                });
+
+                const practiceContainer = document.getElementById('practiceMap');
+                practiceContainer.innerHTML = '';
+                PracticeLevels.forEach(level => {
+                    const card = document.createElement('div');
+                    card.className = 'practice-card';
+                    card.onclick = () => GameEngine.startPractice(level.id);
+                    card.innerHTML = `
+                        <div class="practice-icon">${level.icon}</div>
+                        <h3>${level.name}</h3>
+                        <div class="practice-description">
+                            無限練習模式<br>
+                            💪 持續挑戰九九乘法表 💪<br>
+                            <small>無錯誤限制 • 無時間壓力</small>
                         </div>
-                    </div>
-                `;
-                mapContainer.appendChild(card);
-            });
+                    `;
+                    practiceContainer.appendChild(card);
+                });
+            },
 
-            // 渲染練習關卡
-            const practiceContainer = document.getElementById('practiceMap');
-            practiceContainer.innerHTML = '';
-            PracticeLevels.forEach(level => {
-                const card = document.createElement('div');
-                card.className = 'practice-card';
-                card.onclick = () => openPracticeLevel(level.id);
-                card.innerHTML = `
-                    <div class="practice-icon">${level.icon}</div>
-                    <h3>${level.name}</h3>
-                    <div class="practice-description">
-                        無限練習模式<br>
-                        💪 持續挑戰九九乘法表 💪<br>
-                        <small>無錯誤限制 • 無時間壓力</small>
-                    </div>
-                `;
-                practiceContainer.appendChild(card);
-            });
-        }
+            openDifficultyModal(levelId) {
+                const level = Levels.find(l => l.id === levelId);
+                GameEngine.state.currentLevel = level;
+                const modal = document.getElementById('difficultyModal');
+                document.getElementById('modalTitle').textContent = `${level.name} - 選擇難度`;
+                modal.classList.add('active');
+            },
 
-        function openDifficultyModal(levelId) {
-            gameState.currentLevel = Levels.find(l => l.id === levelId);
-            const modal = document.getElementById('difficultyModal');
-            const title = document.getElementById('modalTitle');
-            title.textContent = `${gameState.currentLevel.name} - 選擇難度`;
-            modal.classList.add('active');
-        }
+            closeModal() {
+                document.getElementById('difficultyModal').classList.remove('active');
+            },
 
-        function openPracticeLevel(levelId) {
-            gameState.currentLevel = PracticeLevels.find(l => l.id === levelId);
-            if (levelId === 99) { // 九九乘法王
-                startMultiplicationPractice();
-            }
-        }
+            showScreen(screen) {
+                const map = document.getElementById('levelMap');
+                const practice = document.querySelector('.practice-section');
+                const title = document.querySelector('.game-title');
+                const game = document.getElementById('gameScreen');
+                const result = document.getElementById('resultScreen');
 
-        function closeModal() {
-            document.getElementById('difficultyModal').classList.remove('active');
-        }
+                if (screen === 'map') {
+                    game.classList.remove('active');
+                    result.classList.remove('active');
+                    map.style.display = 'grid';
+                    practice.style.display = 'block';
+                    title.style.display = 'block';
+                    this.renderLevelMap();
+                } else if (screen === 'game') {
+                    map.style.display = 'none';
+                    practice.style.display = 'none';
+                    title.style.display = 'none';
+                    game.classList.add('active');
+                    result.classList.remove('active');
+                }
+            },
 
-        // 九九乘法王專用練習模式
-        function startMultiplicationPractice() {
-            gameState.difficulty = 'practice';
-            gameState.questionIndex = 0;
-            gameState.errors = 0;
-            gameState.correctCount = 0;
-            gameState.isPracticeMode = true;
+            updateGameUI() {
+                const state = GameEngine.state;
+                document.getElementById('levelName').textContent = state.currentLevel.name;
+                document.getElementById('questionNumber').textContent = state.questionIndex + 1;
+                document.getElementById('totalQuestions').textContent = state.totalQuestions;
+                document.getElementById('errorCount').textContent = state.errors;
+                
+                // Show game elements
+                document.getElementById('errorCount').parentElement.style.display = 'block';
+                document.getElementById('progressFill').parentElement.style.display = 'block';
+                
+                const progress = (state.questionIndex / state.totalQuestions) * 100;
+                document.getElementById('progressFill').style.width = progress + '%';
+            },
 
-            // 隱藏所有主選單元素（與其他關卡一致）
-            document.getElementById('levelMap').style.display = 'none';
-            document.querySelector('.practice-section').style.display = 'none';
-            document.querySelector('.game-title').style.display = 'none';
-            document.getElementById('gameScreen').classList.add('active');
-            updatePracticeUI();
-            generateNewMultiplicationQuestion();
-        }
+            updatePracticeUI() {
+                const state = GameEngine.state;
+                document.getElementById('levelName').textContent = state.currentLevel.name + ' - 練習模式';
+                document.getElementById('questionNumber').textContent = state.questionIndex + 1;
+                document.getElementById('totalQuestions').textContent = '∞';
 
-        function updatePracticeUI() {
-            document.getElementById('levelName').textContent = gameState.currentLevel.name + ' - 練習模式';
-            document.getElementById('questionNumber').textContent = gameState.questionIndex + 1;
-            document.getElementById('totalQuestions').textContent = '∞';
+                // Hide unnecessary elements
+                document.getElementById('errorCount').parentElement.style.display = 'none';
+                document.getElementById('progressFill').parentElement.style.display = 'none';
+            },
 
-            // 隱藏錯誤計數和進度條（練習模式不需要）
-            document.getElementById('errorCount').parentElement.style.display = 'none';
-            document.getElementById('progressFill').parentElement.style.display = 'none';
-        }
+            updateErrorCount(count) {
+                document.getElementById('errorCount').textContent = count;
+            },
 
-        function generateNewMultiplicationQuestion() {
-            // 隨機選擇 2-9 的乘法表
-            const num1 = Math.floor(Math.random() * 8) + 2;
-            const num2 = Math.floor(Math.random() * 8) + 2;
-            const answer = num1 * num2;
+            renderQuestion(question, onAnswer) {
+                const questionContent = document.getElementById('questionContent');
+                const answersContainer = document.getElementById('answersContainer');
+                const clockContainer = document.getElementById('clockContainer');
 
-            const currentQuestion = {
-                question: `${num1} × ${num2} = ?`,
-                answer: answer,
-                options: Utils.generateMultiplicationOptions(answer)
-            };
+                questionContent.textContent = question.question;
+                clockContainer.innerHTML = '';
+                answersContainer.innerHTML = '';
 
-            showPracticeQuestion(currentQuestion);
-        }
+                if (question.coinsHtml) {
+                    const coinDiv = document.createElement('div');
+                    coinDiv.className = 'coin-container';
+                    coinDiv.innerHTML = question.coinsHtml;
+                    clockContainer.appendChild(coinDiv);
+                }
 
-        function showPracticeQuestion(question) {
-            const questionContent = document.getElementById('questionContent');
-            const answersContainer = document.getElementById('answersContainer');
-            const clockContainer = document.getElementById('clockContainer');
+                if (question.isClock) {
+                    const clockDiv = document.createElement('div');
+                    clockDiv.id = 'clockContainerInner';
+                    clockDiv.className = 'clock-canvas';
+                    clockContainer.appendChild(clockDiv);
+                    drawClock(question.hour, question.minute);
+                }
 
-            questionContent.textContent = question.question;
-            clockContainer.innerHTML = '';
-            answersContainer.innerHTML = '';
+                question.options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.className = 'answer-btn';
+                    btn.textContent = option;
+                    btn.onclick = () => onAnswer(option, btn);
+                    answersContainer.appendChild(btn);
+                });
+            },
 
-            question.options.forEach(option => {
-                const btn = document.createElement('button');
-                btn.className = 'answer-btn';
-                btn.textContent = option;
-                btn.onclick = () => checkPracticeAnswer(option, btn, question.answer);
-                answersContainer.appendChild(btn);
-            });
-        }
+            disableAnswerButtons() {
+                document.querySelectorAll('.answer-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                });
+            },
 
-        function checkPracticeAnswer(selected, btnElement, correctAnswer) {
-            const isCorrect = selected === correctAnswer;
-
-            // 禁用所有按鈕
-            document.querySelectorAll('.answer-btn').forEach(btn => {
-                btn.disabled = true;
-                btn.style.cursor = 'not-allowed';
-            });
-
-            if (isCorrect) {
-                btnElement.classList.add('correct');
-                AudioSystem.playCorrect();
-                gameState.correctCount++;
-                gameState.questionIndex++;
-
-                // 1秒後自動進入下一題
-                setTimeout(() => {
-                    updatePracticeUI();
-                    generateNewMultiplicationQuestion();
-                }, 1000);
-            } else {
-                btnElement.classList.add('wrong');
-                AudioSystem.playWrong();
-
-                // 高亮顯示正確答案
+            highlightCorrectAnswer(correctAnswer) {
                 document.querySelectorAll('.answer-btn').forEach(btn => {
                     if (btn.textContent === String(correctAnswer)) {
                         btn.classList.add('correct');
                     }
                 });
+            },
 
-                // 2秒後自動進入下一題（給更多時間查看正確答案）
-                setTimeout(() => {
-                    gameState.questionIndex++;
-                    updatePracticeUI();
-                    generateNewMultiplicationQuestion();
-                }, 2000);
-            }
-        }
+            showResult(stars, correctCount, totalQuestions) {
+                document.getElementById('gameScreen').classList.remove('active');
+                const resultScreen = document.getElementById('resultScreen');
+                resultScreen.classList.add('active');
 
-        function startGame(difficulty) {
-            gameState.difficulty = difficulty;
-            gameState.questionIndex = 0;
-            gameState.errors = 0;
-            gameState.correctCount = 0;
-            gameState.questions = [];
-            for (let i = 0; i < gameState.totalQuestions; i++) {
-                gameState.questions.push(gameState.currentLevel.generateQuestion(difficulty));
-            }
-            closeModal();
+                const resultTitle = document.getElementById('resultTitle');
+                const resultStars = document.getElementById('resultStars');
+                const resultMessage = document.getElementById('resultMessage');
 
-            // 隱藏所有主選單元素
-            document.getElementById('levelMap').style.display = 'none';
-            document.querySelector('.practice-section').style.display = 'none';
-            document.querySelector('.game-title').style.display = 'none';
-            document.getElementById('gameScreen').classList.add('active');
-            updateGameUI();
-            showQuestion();
-        }
-
-        function updateGameUI() {
-            document.getElementById('levelName').textContent = gameState.currentLevel.name;
-            document.getElementById('questionNumber').textContent = gameState.questionIndex + 1;
-            document.getElementById('totalQuestions').textContent = gameState.totalQuestions;
-            document.getElementById('errorCount').textContent = gameState.errors;
-            const progress = ((gameState.questionIndex) / gameState.totalQuestions) * 100;
-            document.getElementById('progressFill').style.width = progress + '%';
-        }
-
-        function showQuestion() {
-            const question = gameState.questions[gameState.questionIndex];
-            const questionContent = document.getElementById('questionContent');
-            const answersContainer = document.getElementById('answersContainer');
-            const clockContainer = document.getElementById('clockContainer');
-            questionContent.textContent = question.question;
-            clockContainer.innerHTML = '';
-            // Handle coin visualization
-            if (question.coinsHtml) {
-                const coinDiv = document.createElement('div');
-                coinDiv.className = 'coin-container';
-                coinDiv.innerHTML = question.coinsHtml;
-                clockContainer.appendChild(coinDiv);
-            }
-            if (question.isClock) {
-                const clockDiv = document.createElement('div');
-                clockDiv.id = 'clockContainerInner';
-                clockDiv.className = 'clock-canvas';
-                clockContainer.appendChild(clockDiv);
-                drawClock(question.hour, question.minute);
-            }
-            answersContainer.innerHTML = '';
-            question.options.forEach(option => {
-                const btn = document.createElement('button');
-                btn.className = 'answer-btn';
-                btn.textContent = option;
-                btn.onclick = () => checkAnswer(option, btn);
-                answersContainer.appendChild(btn);
-            });
-        }
-
-        function checkAnswer(selected, btnElement) {
-            const question = gameState.questions[gameState.questionIndex];
-            const isCorrect = selected === question.answer;
-            document.querySelectorAll('.answer-btn').forEach(btn => {
-                btn.disabled = true;
-                btn.style.cursor = 'not-allowed';
-            });
-            if (isCorrect) {
-                btnElement.classList.add('correct');
-                AudioSystem.playCorrect();
-                gameState.correctCount++;
-                setTimeout(() => {
-                    gameState.questionIndex++;
-                    if (gameState.questionIndex >= gameState.totalQuestions) {
-                        endGame();
-                    } else {
-                        updateGameUI();
-                        showQuestion();
-                    }
-                }, 1000);
-            } else {
-                btnElement.classList.add('wrong');
-                AudioSystem.playWrong();
-                gameState.errors++;
-                document.getElementById('errorCount').textContent = gameState.errors;
-
-                // Highlight the correct answer
-                document.querySelectorAll('.answer-btn').forEach(btn => {
-                    if (btn.textContent === String(question.answer)) {
-                        btn.classList.add('correct');
-                    }
-                });
-
-                if (gameState.errors >= 3) {
-                    setTimeout(() => {
-                        endGame();
-                    }, 1000);
+                if (stars === 3) {
+                    resultTitle.textContent = '太棒了！完美過關！';
+                    resultMessage.textContent = `你答對了全部 ${totalQuestions} 題！`;
+                    AudioSystem.playComplete();
+                } else if (stars > 0) {
+                    resultTitle.textContent = '做得好！';
+                    resultMessage.textContent = `你答對了 ${correctCount} 題，繼續加油！`;
+                    AudioSystem.playComplete();
                 } else {
-                    setTimeout(() => {
-                        gameState.questionIndex++;
-                        if (gameState.questionIndex >= gameState.totalQuestions) {
-                            endGame();
-                        } else {
-                            updateGameUI();
-                            showQuestion();
-                        }
-                    }, 1000);
+                    resultTitle.textContent = '再接再厲！';
+                    resultMessage.textContent = `這次答對了 ${correctCount} 題，下次一定會更好！`;
+                }
+                resultStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+            },
+
+            hideResult() {
+                document.getElementById('resultScreen').classList.remove('active');
+            },
+
+            confirmExit() {
+                if (confirm('確定要離開遊戲嗎？進度將不會保存。')) {
+                    GameEngine.backToMap();
                 }
             }
-        }
+        };
 
-        function endGame() {
-            const correctAnswers = gameState.correctCount;
-            let stars = 0;
-            if (gameState.errors === 0) stars = 3;
-            else if (gameState.errors === 1) stars = 2;
-            else if (gameState.errors === 2) stars = 1;
-            Storage.saveRecord(gameState.currentLevel.id, gameState.difficulty, stars);
-            document.getElementById('gameScreen').classList.remove('active');
-            const resultScreen = document.getElementById('resultScreen');
-            resultScreen.classList.add('active');
-            const resultTitle = document.getElementById('resultTitle');
-            const resultStars = document.getElementById('resultStars');
-            const resultMessage = document.getElementById('resultMessage');
-            if (stars === 3) {
-                resultTitle.textContent = '太棒了！完美過關！';
-                resultMessage.textContent = `你答對了全部 ${gameState.totalQuestions} 題！`;
-                AudioSystem.playComplete();
-            } else if (stars > 0) {
-                resultTitle.textContent = '做得好！';
-                resultMessage.textContent = `你答對了 ${correctAnswers} 題，繼續加油！`;
-                AudioSystem.playComplete();
-            } else {
-                resultTitle.textContent = '再接再厲！';
-                resultMessage.textContent = `這次答對了 ${correctAnswers} 題，下次一定會更好！`;
-            }
-            resultStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-        }
-
-        function exitGame() {
-            if (confirm('確定要離開遊戲嗎？進度將不會保存。')) {
-                backToMap();
-            }
-        }
-
-        function retryLevel() {
-            document.getElementById('resultScreen').classList.remove('active');
-            startGame(gameState.difficulty);
-        }
-
-        function backToMap() {
-            document.getElementById('gameScreen').classList.remove('active');
-            document.getElementById('resultScreen').classList.remove('active');
-            document.getElementById('levelMap').style.display = 'grid';
-            renderLevelMap();
-            document.querySelector('.practice-section').style.display = 'block';
-            document.querySelector('.game-title').style.display = 'block';
-        }
 
         window.onload = () => {
-            AudioSystem.init();
-            renderLevelMap();
+            GameEngine.init();
         };
     </script>
 </body>
