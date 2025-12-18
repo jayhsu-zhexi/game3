@@ -56,6 +56,30 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
+            gap: 10px;
+        }
+
+        .coin-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .coin-img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 5px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        .coin-count {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
         }
 
         @keyframes titleFloat {
@@ -446,6 +470,7 @@
             left: 50%;
             transform-origin: bottom center;
             background: #333;
+            transition: transform 0.5s cubic-bezier(0.4, 2.08, 0.55, 0.44);
         }
 
         .hour-hand {
@@ -815,6 +840,29 @@
                     }
                 }
                 return this.shuffleArray(options);
+            },
+            getCoinSvg(value) {
+                const colors = {
+                    1: { bg: '#e67e22', border: '#d35400', text: '#fff' },
+                    5: { bg: '#95a5a6', border: '#7f8c8d', text: '#fff' },
+                    10: { bg: '#f1c40f', border: '#f39c12', text: '#8b4513' },
+                    50: { bg: '#f1c40f', border: '#d35400', text: '#8b4513' },
+                    100: { bg: '#e74c3c', border: '#c0392b', text: '#fff' }
+                };
+                const c = colors[value] || colors[1];
+                const isBill = value >= 100;
+                if (isBill) {
+                    return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="96" height="56" rx="5" fill="${c.bg}" stroke="${c.border}" stroke-width="2"/>
+                        <circle cx="50" cy="30" r="15" fill="none" stroke="${c.border}" stroke-width="1" opacity="0.5"/>
+                        <text x="50" y="38" font-family="Arial" font-size="20" font-weight="bold" fill="${c.text}" text-anchor="middle">${value}</text>
+                    </svg>`;
+                }
+                return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" fill="${c.bg}" stroke="${c.border}" stroke-width="3"/>
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="${c.border}" stroke-width="1" stroke-dasharray="2,2"/>
+                    <text x="50" y="65" font-family="Arial" font-size="40" font-weight="bold" fill="${c.text}" text-anchor="middle">${value}</text>
+                </svg>`;
             }
         };
 
@@ -1124,43 +1172,40 @@
                 icon: '💰',
                 generateQuestion: (difficulty) => {
                     const isEasy = difficulty === 'easy';
-                    if (isEasy) {
-                        const coins = [
-                            { value: 1, count: Math.floor(Math.random() * 5) },
-                            { value: 5, count: Math.floor(Math.random() * 4) },
-                            { value: 10, count: Math.floor(Math.random() * 3) }
-                        ];
-                        const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
-                        const description = coins
-                            .filter(c => c.count > 0)
-                            .map(c => `<span class="coin-tag">${c.count}個${c.value}元</span>`)
-                            .join('');
-                        return {
-                            question: `你有這些錢，總共有多少元？`,
-                            coinsHtml: description,
-                            answer: total,
-                            options: Utils.generateOptions(total, 50)
-                        };
-                    } else {
-                        const coins = [
-                            { value: 1, count: Math.floor(Math.random() * 5) },
-                            { value: 5, count: Math.floor(Math.random() * 3) },
-                            { value: 10, count: Math.floor(Math.random() * 3) },
-                            { value: 50, count: Math.floor(Math.random() * 2) },
-                            { value: 100, count: Math.floor(Math.random() * 2) }
-                        ];
-                        const total = coins.reduce((sum, coin) => sum + coin.value * coin.count, 0);
-                        const description = coins
-                            .filter(c => c.count > 0)
-                            .map(c => `<span class="coin-tag">${c.count}個${c.value}元</span>`)
-                            .join('');
-                        return {
-                            question: `你有這些錢，總共有多少元？`,
-                            coinsHtml: description,
-                            answer: total,
-                            options: Utils.generateOptions(total, 300)
-                        };
-                    }
+                    const coinConfigs = isEasy ? [
+                        { value: 1, max: 10 },
+                        { value: 5, max: 5 },
+                        { value: 10, max: 3 }
+                    ] : [
+                        { value: 1, max: 10 },
+                        { value: 5, max: 5 },
+                        { value: 10, max: 5 },
+                        { value: 50, max: 2 },
+                        { value: 100, max: 2 }
+                    ];
+
+                    // 隨機選取 2-3 種錢幣
+                    const selectedConfigs = Utils.shuffleArray(coinConfigs).slice(0, isEasy ? 2 : 3);
+                    let total = 0;
+                    let coinsHtml = '';
+
+                    selectedConfigs.forEach(config => {
+                        const count = Math.floor(Math.random() * config.max) + 1;
+                        total += config.value * count;
+                        coinsHtml += `
+                            <div class="coin-wrapper">
+                                <div class="coin-img">${Utils.getCoinSvg(config.value)}</div>
+                                <div class="coin-count">x ${count}</div>
+                            </div>
+                        `;
+                    });
+
+                    return {
+                        question: `你有這些錢，總共有多少元？`,
+                        coinsHtml: coinsHtml,
+                        answer: total,
+                        options: Utils.generateOptions(total, isEasy ? 100 : 500)
+                    };
                 }
             },
             {
@@ -1294,9 +1339,19 @@
                 ${ticksHtml}
                 ${numbersHtml}
                 <div class="clock-center"></div>
-                <div class="clock-hand hour-hand" style="transform: rotate(${(hour % 12) * 30 + minute * 0.5}deg)"></div>
-                <div class="clock-hand minute-hand" style="transform: rotate(${minute * 6}deg)"></div>
+                <div class="clock-hand hour-hand" id="hourHand"></div>
+                <div class="clock-hand minute-hand" id="minuteHand"></div>
             `;
+            
+            // 使用 setTimeout 確保 DOM 已渲染，從而觸發 CSS transition
+            setTimeout(() => {
+                const hourHand = document.getElementById('hourHand');
+                const minuteHand = document.getElementById('minuteHand');
+                if (hourHand && minuteHand) {
+                    hourHand.style.transform = `rotate(${(hour % 12) * 30 + minute * 0.5}deg)`;
+                    minuteHand.style.transform = `rotate(${minute * 6}deg)`;
+                }
+            }, 50);
         }
 
         const Storage = {
