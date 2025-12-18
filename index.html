@@ -912,6 +912,109 @@
                 }
                 return this.shuffleArray(options);
             },
+            generateDynamicStory() {
+                const types = [
+                    {
+                        // 型態 1: A + B - C (先增加後減少)
+                        templates: [
+                            (a, b, c) => `小光有 ${a} 塊積木，小華給他 ${b} 塊後，小光又借給同學 ${c} 塊，小光現在有幾塊積木？`,
+                            (a, b, c) => `球池裡原本有 ${a} 個人，又進來了 ${b} 個人，後來離開了 ${c} 個人，現在球池裡有幾個人？`,
+                            (a, b, c) => `公車上原本有 ${a} 個人，到站後上來了 ${b} 個人，又下車了 ${c} 個人，現在車上有幾個人？`
+                        ],
+                        logic: () => {
+                            const a = Math.floor(Math.random() * 30) + 20; // 20-50
+                            const b = Math.floor(Math.random() * 20) + 10; // 10-30
+                            const c = Math.floor(Math.random() * (a + b - 10)) + 5; // 確保剩餘至少10
+                            const ans = a + b - c;
+                            return { vars: [a, b, c], answer: ans, unit: "個/塊/人" };
+                        }
+                    },
+                    {
+                        // 型態 2: A - B - C (連續減少)
+                        templates: [
+                            (a, b, c) => `媽媽買了 ${a} 顆糖果，分給哥哥 ${b} 顆，又分給妹妹 ${c} 顆，媽媽還剩幾顆糖果？`,
+                            (a, b, c) => `小豪有 ${a} 元，買文具用了 ${b} 元，買飲料用了 ${c} 元，小豪還剩下幾元？`,
+                            (a, b, c) => `箱子裡有 ${a} 個蘋果，上午運走 ${b} 個，下午又運走 ${c} 個，箱子還剩幾個蘋果？`
+                        ],
+                        logic: () => {
+                            const a = Math.floor(Math.random() * 40) + 50; // 50-90
+                            const b = Math.floor(Math.random() * 20) + 10; // 10-30
+                            const c = Math.floor(Math.random() * (a - b - 10)) + 5; // 確保剩餘至少10
+                            const ans = a - b - c;
+                            return { vars: [a, b, c], answer: ans, unit: "顆/元/個" };
+                        }
+                    },
+                    {
+                        // 型態 3: A + B + C (三項加法)
+                        templates: [
+                            (a, b, c) => `水果店有 ${a} 個蘋果、${b} 個橘子和 ${c} 個梨子，這三種水果共有幾個？`,
+                            (a, b, c) => `小美第一節課背了 ${a} 個單字，第二節背了 ${b} 個，第三節又背了 ${c} 個，小美共背了幾個單字？`,
+                            (a, b, c) => `二年級一班有 ${a} 個男生，二班有 ${b} 個男生，三班有 ${c} 個男生，這三個班共有幾個男生？`
+                        ],
+                        logic: () => {
+                            const a = Math.floor(Math.random() * 20) + 10; // 10-30
+                            const b = Math.floor(Math.random() * 20) + 10; // 10-30
+                            const c = Math.floor(Math.random() * 20) + 10; // 10-30
+                            const ans = a + b + c;
+                            return { vars: [a, b, c], answer: ans, unit: "個/位" };
+                        }
+                    }
+                ];
+
+                const type = types[Math.floor(Math.random() * types.length)];
+                const data = type.logic();
+                const template = type.templates[Math.floor(Math.random() * type.templates.length)];
+                
+                // 提取單位
+                const q = template(...data.vars);
+                let unit = "";
+                if (q.includes("元")) unit = "元";
+                else if (q.includes("歲")) unit = "歲";
+                else if (q.includes("塊")) unit = "塊";
+                else if (q.includes("人")) unit = "人";
+                else if (q.includes("顆")) unit = "顆";
+                else if (q.includes("張")) unit = "張";
+                else if (q.includes("枝")) unit = "枝";
+                else if (q.includes("瓶")) unit = "瓶";
+                else if (q.includes("箱")) unit = "箱";
+                else if (q.includes("分")) unit = "分";
+                else if (q.includes("杯")) unit = "杯";
+                else if (q.includes("題")) unit = "題";
+                else if (q.includes("分鐘")) unit = "分鐘";
+                else if (q.includes("包")) unit = "包";
+                else if (q.includes("位")) unit = "位";
+                else if (q.includes("隻")) unit = "隻";
+                else if (q.includes("朵")) unit = "朵";
+                else if (q.includes("本") && !q.includes("原本")) unit = "本";
+                else if (q.includes("個")) unit = "個";
+
+                // 生成干擾選項
+                const ans = data.answer;
+                const options = [ans];
+                
+                // 增加錯誤路徑干擾
+                const [a, b, c] = data.vars;
+                const distractor1 = a + b + c; // 誤加
+                const distractor2 = Math.abs(a - b - c); // 誤減
+                const distractor3 = a + b; // 漏掉最後一步
+                
+                [distractor1, distractor2, distractor3].forEach(d => {
+                    if (d !== ans && d > 0 && !options.includes(d)) options.push(d);
+                });
+
+                // 如果還不足 4 個，使用隨機偏移
+                while (options.length < 4) {
+                    const offset = Math.floor(Math.random() * 10) + 1;
+                    const opt = Math.random() > 0.5 ? ans + offset : ans - offset;
+                    if (opt > 0 && !options.includes(opt)) options.push(opt);
+                }
+
+                return {
+                    question: q,
+                    answer: ans + unit,
+                    options: this.shuffleArray(options.map(o => o + unit))
+                };
+            },
             getCoinSvg(value) {
                 const colors = {
                     1: { bg: '#e67e22', border: '#d35400', text: '#fff' },
@@ -1089,14 +1192,18 @@
                             options: Utils.generateOptions(result.a, 20)
                         };
                     } else {
-                        // 困難模式：從題庫中隨機挑選
-                        const randomIdx = Math.floor(Math.random() * STORY_MAZE_HARD_QUESTIONS.length);
-                        const qData = STORY_MAZE_HARD_QUESTIONS[randomIdx];
-                        return {
-                            question: qData.q,
-                            answer: qData.answer,
-                            options: Utils.shuffleArray([...qData.options])
-                        };
+                        // 困難模式：50% 機率從題庫抽題，50% 機率隨機生成
+                        if (Math.random() > 0.5) {
+                            return Utils.generateDynamicStory();
+                        } else {
+                            const randomIdx = Math.floor(Math.random() * STORY_MAZE_HARD_QUESTIONS.length);
+                            const qData = STORY_MAZE_HARD_QUESTIONS[randomIdx];
+                            return {
+                                question: qData.q,
+                                answer: qData.answer,
+                                options: Utils.shuffleArray([...qData.options])
+                            };
+                        }
                     }
                 }
             },
