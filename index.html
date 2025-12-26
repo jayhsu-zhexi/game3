@@ -1398,7 +1398,20 @@
             const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             const correctAnswer = formatTime(hour, minute);
             const options = [correctAnswer];
-            while (options.length < 6) {
+
+            if (!isEasy) {
+                // 困難模式：強制加入小時數 +-1 的選項
+                const prevHour = hour - 1 < 1 ? 12 : hour - 1;
+                const nextHour = hour + 1 > 12 ? 1 : hour + 1;
+
+                const opt1 = formatTime(prevHour, minute);
+                const opt2 = formatTime(nextHour, minute);
+
+                if (!options.includes(opt1)) options.push(opt1);
+                if (!options.includes(opt2)) options.push(opt2);
+            }
+
+            while (options.length < 4) {
                 // 步驟 1: 讓小時 h 接近答案 hour (+- 1 小時)
                 let h;
                 const hourRange = 1; // 接近範圍：+- 1 小時
@@ -1415,17 +1428,16 @@
 
                 // 步驟 2: 讓分鐘 m 接近答案 minute (+- 15 分鐘)
                 let m;
-                const minuteRange = 3;
+                const minuteRange = isEasy ? 15 : 5;
                 const minM = Math.max(0, minute - minuteRange);
                 const maxM = Math.min(59, minute + minuteRange);
 
                 if (isEasy) {
                     // 在接近範圍內生成 5 的倍數
-                    m = Math.floor(Math.random() * ((maxM - minM) / 5 + 1)) * 5 + minM;
-                    m = Math.round(m / 5) * 5;
+                    m = Math.floor(Math.random() * 12) * 5;
                 } else {
                     // 在接近範圍內生成任意分鐘
-                    m = Math.floor(Math.random() * (maxM - minM + 1)) + minM;
+                    m = Math.floor(Math.random() * 60);
                 }
 
                 const option = formatTime(h, m);
