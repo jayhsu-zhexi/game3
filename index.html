@@ -118,6 +118,10 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
         }
 
+        .coin-wrapper.is-bill .coin-img {
+            width: clamp(60px, 15vw, 100px);
+        }
+
         .coin-img svg {
             width: 100%;
             height: 100%;
@@ -1052,10 +1056,11 @@
                 const c = colors[value] || colors[1];
                 const isBill = value >= 100;
                 if (isBill) {
+                    const fontSize = value >= 1000 ? 22 : 26;
                     return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
                         <rect x="2" y="2" width="96" height="56" rx="5" fill="${c.bg}" stroke="${c.border}" stroke-width="2"/>
                         <circle cx="50" cy="30" r="15" fill="none" stroke="${c.border}" stroke-width="1" opacity="0.5"/>
-                        <text x="50" y="38" font-family="Arial" font-size="20" font-weight="bold" fill="${c.text}" text-anchor="middle">${value}</text>
+                        <text x="50" y="38" font-family="Arial" font-size="${fontSize}" font-weight="bold" fill="${c.text}" text-anchor="middle">${value}</text>
                     </svg>`;
                 }
                 return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -1314,8 +1319,10 @@
                         total += config.value * count;
                         coinsHtml += `<div class="coin-row">`;
                         for (let i = 0; i < count; i++) {
+                            const isBill = config.value >= 100;
+                            const billClass = isBill ? 'is-bill' : '';
                             coinsHtml += `
-                                <div class="coin-wrapper" style="margin: 2px;">
+                                <div class="coin-wrapper ${billClass}" style="margin: 2px;">
                                     <div class="coin-img">${Utils.getCoinSvg(config.value)}</div>
                                 </div>
                             `;
