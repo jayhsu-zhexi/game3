@@ -876,7 +876,7 @@
         /* 消消樂樣式 */
         .match3-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             aspect-ratio: 1;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.1);
@@ -901,7 +901,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(20px, 5vw, 32px);
+            font-size: clamp(26px, 6.5vw, 38px);
             cursor: pointer;
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s;
             user-select: none;
@@ -932,6 +932,74 @@
 
         .match3-tile.falling {
             transition: top 0.3s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+        }
+
+        /* 記憶遊戲樣式 */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+            perspective: 1000px;
+        }
+
+        @media (max-width: 600px) {
+            .memory-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 5px;
+            }
+        }
+
+        .memory-card {
+            aspect-ratio: 3/4;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .memory-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            animation: matchSuccess 0.5s ease-out forwards;
+        }
+
+        @keyframes matchSuccess {
+            0% { transform: rotateY(180deg) scale(1); filter: brightness(1); opacity: 1; }
+            50% { transform: rotateY(180deg) scale(1.1); filter: brightness(1.5); box-shadow: 0 0 20px #ffd700; opacity: 1; }
+            100% { transform: rotateY(180deg) scale(0); filter: brightness(0.8); opacity: 0; }
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(32px, 8vw, 50px);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .card-back::after {
+            content: '🌳';
+            font-size: 1.2em;
         }
     </style>
 </head>
@@ -968,6 +1036,18 @@
                         放鬆一下！<br>
                         🍎 將三個相同的水果連在一起消除吧 🍇<br>
                         <small>益智休閒 • 森林主題</small>
+                    </div>
+                </div>
+                <div class="practice-card" onclick="MemoryGame.start()" style="position: relative;">
+                    <div style="position: absolute; top: 10px; right: 10px; background: #ff4d4d; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        一次 3 ⭐
+                    </div>
+                    <div class="practice-icon">🧠</div>
+                    <h3>森林記憶王</h3>
+                    <div class="practice-description">
+                        腦力大考驗！<br>
+                        🔍 找出兩兩成對的森林夥伴吧 🦉<br>
+                        <small>記憶訓練 • 24張卡片</small>
                     </div>
                 </div>
             </div>
@@ -1065,6 +1145,21 @@
                 <!-- 網格將由 JS 動態生成 -->
             </div>
             <p style="text-align: center; margin-top: 10px; color: #666;">點擊兩個相鄰的水果來交換位置！</p>
+        </div>
+
+        <!-- 記憶遊戲畫面 -->
+        <div id="memoryScreen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">森林記憶王</div>
+                    <div class="info-item">配對: <span id="memoryPairs">0</span>/12</div>
+                </div>
+                <button class="back-btn" onclick="MemoryGame.stop()">返回地圖</button>
+            </div>
+            <div id="memoryGrid" class="memory-grid">
+                <!-- 卡片將由 JS 動態生成 -->
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666;">找出兩兩成對的卡片吧！</p>
         </div>
     </div>
 
@@ -1353,22 +1448,23 @@
             isProcessing: false,
 
             start() {
-                const availableStars = UIManager.getAvailableStars();
-                if (availableStars < 3) {
-                    alert(`🌟 星星不足喔！玩一次「森林消消樂」需要花費 3 顆星星。\n你目前擁有 ${availableStars} 顆可用星星。快去挑戰關卡贏取星星吧！`);
+                const available = UIManager.getAvailableStars();
+                if (available < 3) {
+                    alert(`🌟 需要 3 顆可用星星才能玩「森林消消樂」喔！\n趕快去挑戰關卡賺取星星吧！`);
                     return;
                 }
 
-                if (confirm(`確定要花費 3 顆星星玩「森林消消樂」嗎？\n(目前可用星星: ${availableStars})`)) {
-                    Storage.consumeStarsSequentially(3);
-                    this.score = 0;
-                    this.isProcessing = false;
-                    this.selectedTile = null;
-                    UIManager.showScreen('match3');
-                    this.initGrid();
-                    this.renderGrid();
-                    document.getElementById('match3Score').textContent = '0';
-                    UIManager.renderLevelMap(); // 更新地圖上的可用星星顯示
+                if (confirm(`確定要花費 3 顆星星開始「森林消消樂」嗎？`)) {
+                    if (Storage.consumeStarsSequentially(3)) {
+                        this.score = 0;
+                        this.isProcessing = false;
+                        this.selectedTile = null;
+                        UIManager.showScreen('match3');
+                        this.initGrid();
+                        this.renderGrid();
+                        document.getElementById('match3Score').textContent = '0';
+                        UIManager.renderLevelMap(); 
+                    }
                 }
             },
 
@@ -1540,6 +1636,166 @@
                         this.grid[r][c] = this.items[Math.floor(Math.random() * this.items.length)];
                     }
                 }
+            }
+        };
+
+        // 記憶遊戲邏輯
+        const MemoryGame = {
+            icons: ['🦊', '🐰', '🦉', '🐻', '🦌', '🐗', '🦝', '🐹', '🐿️', '🐢', '🦋', '🐝'],
+            cards: [],
+            flippedCards: [],
+            matchedPairs: 0,
+            isProcessing: false,
+
+            start() {
+                const available = UIManager.getAvailableStars();
+                if (available < 3) {
+                    alert(`🌟 需要 3 顆可用星星才能玩「森林記憶王」喔！\n趕快去挑戰關卡賺取星星吧！`);
+                    return;
+                }
+
+                if (confirm(`確定要花費 3 顆星星開始「森林記憶王」嗎？`)) {
+                    if (Storage.consumeStarsSequentially(3)) {
+                        this.initGame();
+                        UIManager.showScreen('memory');
+                        UIManager.renderLevelMap(); 
+                    }
+                }
+            },
+
+            stop() {
+                UIManager.showScreen('map');
+            },
+
+            initGame() {
+                this.matchedPairs = 0;
+                this.flippedCards = [];
+                this.isProcessing = false;
+                
+                // 清理可能的舊過關畫面
+                const oldOverlay = document.getElementById('memoryWinOverlay');
+                if (oldOverlay) oldOverlay.remove();
+
+                const pairsEl = document.getElementById('memoryPairs');
+                if (pairsEl) pairsEl.textContent = '0';
+                
+                // 準備 24 張卡片 (12對)
+                const gameIcons = [...this.icons, ...this.icons];
+                const shuffledIcons = Utils.shuffleArray(gameIcons);
+                
+                this.cards = shuffledIcons.map((icon, index) => ({
+                    id: index,
+                    icon: icon,
+                    isFlipped: false,
+                    isMatched: false
+                }));
+                
+                this.renderGrid();
+            },
+
+            renderGrid() {
+                const grid = document.getElementById('memoryGrid');
+                if (!grid) return;
+                grid.innerHTML = '';
+                this.cards.forEach(card => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'memory-card';
+                    cardEl.dataset.id = card.id;
+                    cardEl.innerHTML = `
+                        <div class="card-face card-front">${card.icon}</div>
+                        <div class="card-face card-back"></div>
+                    `;
+                    cardEl.onclick = () => this.handleCardClick(card.id, cardEl);
+                    grid.appendChild(cardEl);
+                });
+            },
+
+            handleCardClick(id, el) {
+                const card = this.cards[id];
+                if (this.isProcessing || card.isFlipped || card.isMatched || this.flippedCards.length >= 2) return;
+                
+                // 翻開卡片
+                card.isFlipped = true;
+                el.classList.add('flipped');
+                this.flippedCards.push({ card, el });
+                
+                if (this.flippedCards.length === 2) {
+                    this.isProcessing = true;
+                    setTimeout(() => this.checkMatch(), 600);
+                }
+            },
+
+            checkMatch() {
+                const [c1, c2] = this.flippedCards;
+                if (c1.card.icon === c2.card.icon) {
+                    // 匹配成功
+                    c1.card.isMatched = true;
+                    c2.card.isMatched = true;
+                    
+                    // 先加上一個短暫的成功類別來觸發動畫
+                    c1.el.classList.add('matched');
+                    c2.el.classList.add('matched');
+                    
+                    this.matchedPairs++;
+                    const pairsEl = document.getElementById('memoryPairs');
+                    if (pairsEl) pairsEl.textContent = this.matchedPairs;
+                    AudioSystem.playCorrect();
+                    
+                    if (this.matchedPairs === 12) {
+                        setTimeout(() => this.winGame(), 800);
+                    }
+                } else {
+                    // 匹配失敗
+                    c1.card.isFlipped = false;
+                    c2.card.isFlipped = false;
+                    c1.el.classList.remove('flipped');
+                    c2.el.classList.remove('flipped');
+                    AudioSystem.playWrong();
+                }
+                
+                this.flippedCards = [];
+                this.isProcessing = false;
+            },
+
+            winGame() {
+                AudioSystem.playComplete();
+                
+                const container = document.getElementById('memoryScreen');
+                const winOverlay = document.createElement('div');
+                winOverlay.id = 'memoryWinOverlay';
+                winOverlay.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.85);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    z-index: 200;
+                    animation: modalSlideIn 0.5s ease;
+                    text-align: center;
+                    padding: 20px;
+                    border-radius: 25px;
+                `;
+                
+                winOverlay.innerHTML = `
+                    <h2 style="font-size: clamp(28px, 6vw, 40px); color: #ffd700; margin-bottom: 15px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">🎊 記憶大師 🎊</h2>
+                    <div style="font-size: 60px; margin-bottom: 15px;">🌟🌟🌟</div>
+                    <p style="font-size: clamp(18px, 4vw, 22px); margin-bottom: 25px;">太強了！你找出了所有森林夥伴！<br>你的記憶力真是令人驚嘆！</p>
+                    <button class="result-btn home-btn" style="min-width: 200px;" onclick="MemoryGame.stop()">返回地圖</button>
+                `;
+                container.appendChild(winOverlay);
+                
+                const originalStop = this.stop;
+                this.stop = () => {
+                    winOverlay.remove();
+                    originalStop.call(this);
+                    this.stop = originalStop; // 還原
+                };
             }
         };
 
@@ -2577,13 +2833,22 @@
                 const miniGame = document.querySelector('.mini-game-section');
                 const reset = document.getElementById('resetSection');
                 const title = document.querySelector('.game-title');
-                const game = document.getElementById('gameScreen');
-                const result = document.getElementById('resultScreen');
-                const bonusGame = document.getElementById('bonusScreen');
-                const match3Game = document.getElementById('match3Screen');
+                
+                const screens = {
+                    'game': document.getElementById('gameScreen'),
+                    'result': document.getElementById('resultScreen'),
+                    'bonus': document.getElementById('bonusScreen'),
+                    'match3': document.getElementById('match3Screen'),
+                    'memory': document.getElementById('memoryScreen')
+                };
 
-                // 隱藏所有畫面
-                [map, practice, miniGame, reset, title, game, result, bonusGame, match3Game].forEach(el => {
+                // 隱藏地圖相關
+                [map, practice, miniGame, reset, title].forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
+
+                // 隱藏所有遊戲畫面
+                Object.values(screens).forEach(el => {
                     if (el) {
                         el.style.display = 'none';
                         el.classList.remove('active');
@@ -2597,18 +2862,9 @@
                     if (reset) reset.style.display = 'block';
                     title.style.display = 'block';
                     this.renderLevelMap();
-                } else if (screen === 'game') {
-                    game.style.display = 'block';
-                    game.classList.add('active');
-                } else if (screen === 'result') {
-                    result.style.display = 'block';
-                    result.classList.add('active');
-                } else if (screen === 'bonus') {
-                    bonusGame.style.display = 'block';
-                    bonusGame.classList.add('active');
-                } else if (screen === 'match3') {
-                    match3Game.style.display = 'block';
-                    match3Game.classList.add('active');
+                } else if (screens[screen]) {
+                    screens[screen].style.display = 'block';
+                    screens[screen].classList.add('active');
                 }
             },
 
