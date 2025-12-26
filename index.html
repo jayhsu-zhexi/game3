@@ -872,6 +872,67 @@
             0% { width: 0; height: 0; opacity: 0.8; border: 2px solid white; }
             100% { width: 100px; height: 100px; opacity: 0; border: 10px solid white; transform: translate(-50px, -50px); }
         }
+
+        /* 消消樂樣式 */
+        .match3-container {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border: 4px solid #8b4513;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 2px;
+            padding: 5px;
+            position: relative;
+            background: #2d5a27;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+
+        .match3-tile {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 5vw, 32px);
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s;
+            user-select: none;
+            position: relative;
+        }
+
+        .match3-tile:hover {
+            transform: scale(0.95);
+            background: #fff;
+        }
+
+        .match3-tile.selected {
+            background: #fff;
+            box-shadow: 0 0 15px #ffd700, inset 0 0 10px #ffd700;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .match3-tile.match {
+            animation: matchPop 0.4s ease-out forwards;
+        }
+
+        @keyframes matchPop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .match3-tile.falling {
+            transition: top 0.3s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+        }
     </style>
 </head>
 
@@ -890,6 +951,26 @@
         <div class="practice-section">
             <h2 class="practice-title">🔥 特別練習區 🔥</h2>
             <div id="practiceMap" class="practice-map"></div>
+        </div>
+
+        <!-- 迷你遊戲區 -->
+        <div class="mini-game-section" style="margin-top: 30px;">
+            <div id="availableStarsDisplay" style="text-align: center; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 1.2em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);"></div>
+            <h2 class="practice-title">🎮 迷你遊戲區 🎮</h2>
+            <div class="practice-map">
+                <div class="practice-card" onclick="Match3Game.start()" style="position: relative;">
+                    <div style="position: absolute; top: 10px; right: 10px; background: #ff4d4d; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        一次 3 ⭐
+                    </div>
+                    <div class="practice-icon">🍓</div>
+                    <h3>森林消消樂</h3>
+                    <div class="practice-description">
+                        放鬆一下！<br>
+                        🍎 將三個相同的水果連在一起消除吧 🍇<br>
+                        <small>益智休閒 • 森林主題</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 重置進度區域 -->
@@ -969,6 +1050,21 @@
                 <!-- 遊戲元素將由 JS 動態生成 -->
             </div>
             <p style="text-align: center; margin-top: 10px; color: #666;">移動籃子接住掉落的星星吧！</p>
+        </div>
+
+        <!-- 消消樂遊戲畫面 -->
+        <div id="match3Screen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">森林消消樂</div>
+                    <div class="info-item">得分: <span id="match3Score">0</span></div>
+                </div>
+                <button class="back-btn" onclick="Match3Game.stop()">返回地圖</button>
+            </div>
+            <div id="match3Container" class="match3-container">
+                <!-- 網格將由 JS 動態生成 -->
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666;">點擊兩個相鄰的水果來交換位置！</p>
         </div>
     </div>
 
@@ -1244,6 +1340,206 @@
                     if (effect.parentNode) effect.remove();
                     if (ripple.parentNode) ripple.remove();
                 }, 1000);
+            }
+        };
+
+        // 消消樂遊戲邏輯
+        const Match3Game = {
+            gridSize: 8,
+            items: ['🍎', '🍇', '🍊', '🍓', '🥝', '🍋'],
+            grid: [],
+            score: 0,
+            selectedTile: null,
+            isProcessing: false,
+
+            start() {
+                const availableStars = UIManager.getAvailableStars();
+                if (availableStars < 3) {
+                    alert(`🌟 星星不足喔！玩一次「森林消消樂」需要花費 3 顆星星。\n你目前擁有 ${availableStars} 顆可用星星。快去挑戰關卡贏取星星吧！`);
+                    return;
+                }
+
+                if (confirm(`確定要花費 3 顆星星玩「森林消消樂」嗎？\n(目前可用星星: ${availableStars})`)) {
+                    Storage.consumeStarsSequentially(3);
+                    this.score = 0;
+                    this.isProcessing = false;
+                    this.selectedTile = null;
+                    UIManager.showScreen('match3');
+                    this.initGrid();
+                    this.renderGrid();
+                    document.getElementById('match3Score').textContent = '0';
+                    UIManager.renderLevelMap(); // 更新地圖上的可用星星顯示
+                }
+            },
+
+            stop() {
+                UIManager.showScreen('map');
+            },
+
+            initGrid() {
+                this.grid = [];
+                for (let r = 0; r < this.gridSize; r++) {
+                    this.grid[r] = [];
+                    for (let c = 0; c < this.gridSize; c++) {
+                        let item;
+                        do {
+                            item = this.items[Math.floor(Math.random() * this.items.length)];
+                        } while (this.isInitialMatch(r, c, item));
+                        this.grid[r][c] = item;
+                    }
+                }
+            },
+
+            isInitialMatch(r, c, item) {
+                if (r >= 2 && this.grid[r-1][c] === item && this.grid[r-2][c] === item) return true;
+                if (c >= 2 && this.grid[r][c-1] === item && this.grid[r][c-2] === item) return true;
+                return false;
+            },
+
+            renderGrid() {
+                const container = document.getElementById('match3Container');
+                container.innerHTML = '';
+                for (let r = 0; r < this.gridSize; r++) {
+                    for (let c = 0; c < this.gridSize; c++) {
+                        const tile = document.createElement('div');
+                        tile.className = 'match3-tile';
+                        tile.textContent = this.grid[r][c];
+                        tile.dataset.row = r;
+                        tile.dataset.col = c;
+                        tile.onclick = (e) => this.handleTileClick(r, c, tile);
+                        container.appendChild(tile);
+                    }
+                }
+            },
+
+            handleTileClick(r, c, tileEl) {
+                if (this.isProcessing) return;
+
+                if (!this.selectedTile) {
+                    this.selectedTile = { r, c, el: tileEl };
+                    tileEl.classList.add('selected');
+                } else {
+                    const prev = this.selectedTile;
+                    const dist = Math.abs(r - prev.r) + Math.abs(c - prev.c);
+
+                    if (dist === 1) {
+                        this.swap(prev.r, prev.c, r, c);
+                    } else {
+                        prev.el.classList.remove('selected');
+                        if (prev.r === r && prev.c === c) {
+                            this.selectedTile = null;
+                        } else {
+                            this.selectedTile = { r, c, el: tileEl };
+                            tileEl.classList.add('selected');
+                        }
+                    }
+                }
+            },
+
+            async swap(r1, c1, r2, c2) {
+                this.isProcessing = true;
+                const prevEl = this.selectedTile.el;
+                const currEl = document.querySelector(`[data-row="${r2}"][data-col="${c2}"]`);
+                
+                prevEl.classList.remove('selected');
+                this.selectedTile = null;
+
+                // 交換數據
+                const temp = this.grid[r1][c1];
+                this.grid[r1][c1] = this.grid[r2][c2];
+                this.grid[r2][c2] = temp;
+
+                // 更新 UI
+                prevEl.textContent = this.grid[r1][c1];
+                currEl.textContent = this.grid[r2][c2];
+
+                const matches = this.findMatches();
+                if (matches.length > 0) {
+                    await this.processMatches();
+                } else {
+                    // 沒匹配，換回來
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    const tempBack = this.grid[r1][c1];
+                    this.grid[r1][c1] = this.grid[r2][c2];
+                    this.grid[r2][c2] = tempBack;
+                    prevEl.textContent = this.grid[r1][c1];
+                    currEl.textContent = this.grid[r2][c2];
+                    this.isProcessing = false;
+                }
+            },
+
+            findMatches() {
+                const matches = [];
+                // 水平
+                for (let r = 0; r < this.gridSize; r++) {
+                    for (let c = 0; c < this.gridSize - 2; c++) {
+                        const item = this.grid[r][c];
+                        if (item && item === this.grid[r][c+1] && item === this.grid[r][c+2]) {
+                            matches.push({r, c}, {r, c: c+1}, {r, c: c+2});
+                        }
+                    }
+                }
+                // 垂直
+                for (let c = 0; c < this.gridSize; c++) {
+                    for (let r = 0; r < this.gridSize - 2; r++) {
+                        const item = this.grid[r][c];
+                        if (item && item === this.grid[r+1][c] && item === this.grid[r+2][c]) {
+                            matches.push({r, c}, {r: r+1, c}, {r: r+2, c});
+                        }
+                    }
+                }
+                // 去重
+                return Array.from(new Set(matches.map(m => `${m.r},${m.c}`)))
+                            .map(s => { const [r, c] = s.split(',').map(Number); return {r, c}; });
+            },
+
+            async processMatches() {
+                const matches = this.findMatches();
+                if (matches.length === 0) {
+                    this.isProcessing = false;
+                    return;
+                }
+
+                // 標記並動畫消除
+                matches.forEach(m => {
+                    const el = document.querySelector(`[data-row="${m.r}"][data-col="${m.c}"]`);
+                    if (el) el.classList.add('match');
+                });
+
+                AudioSystem.playCorrect();
+                this.score += matches.length * 10;
+                document.getElementById('match3Score').textContent = this.score;
+
+                await new Promise(resolve => setTimeout(resolve, 400));
+
+                // 移除數據
+                matches.forEach(m => {
+                    this.grid[m.r][m.c] = null;
+                });
+
+                // 掉落
+                this.dropItems();
+                this.renderGrid();
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+                await this.processMatches(); // 遞迴檢查連鎖反應
+            },
+
+            dropItems() {
+                for (let c = 0; c < this.gridSize; c++) {
+                    let emptyRow = this.gridSize - 1;
+                    for (let r = this.gridSize - 1; r >= 0; r--) {
+                        if (this.grid[r][c] !== null) {
+                            this.grid[emptyRow][c] = this.grid[r][c];
+                            if (emptyRow !== r) this.grid[r][c] = null;
+                            emptyRow--;
+                        }
+                    }
+                    // 補新方塊
+                    for (let r = emptyRow; r >= 0; r--) {
+                        this.grid[r][c] = this.items[Math.floor(Math.random() * this.items.length)];
+                    }
+                }
             }
         };
 
@@ -1961,10 +2257,48 @@
                     localStorage.setItem(key, stars);
                 }
             },
+            getUsedStars() {
+                return parseInt(localStorage.getItem('stars_used')) || 0;
+            },
+            useStars(count) {
+                const current = this.getUsedStars();
+                localStorage.setItem('stars_used', current + count);
+            },
+            consumeStarsSequentially(count) {
+                let remainingToConsume = count;
+                // 定義順序：關卡 1->6，每個關卡先扣簡單再扣困難
+                for (let levelId = 1; levelId <= 6; levelId++) {
+                    const difficulties = ['easy', 'hard'];
+                    for (const diff of difficulties) {
+                        if (remainingToConsume <= 0) break;
+                        
+                        const key = `level_${levelId}_${diff}`;
+                        let stars = parseInt(localStorage.getItem(key)) || 0;
+                        
+                        if (stars > 0) {
+                            const consume = Math.min(stars, remainingToConsume);
+                            stars -= consume;
+                            remainingToConsume -= consume;
+                            
+                            if (stars > 0) {
+                                localStorage.setItem(key, stars);
+                            } else {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                    }
+                    if (remainingToConsume <= 0) break;
+                }
+                
+                // 既然現在直接扣除關卡星星，清除舊有的 stars_used 以免混亂
+                localStorage.removeItem('stars_used');
+                
+                return remainingToConsume === 0;
+            },
             clearAllRecords() {
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
-                    if (key.startsWith('level_')) {
+                    if (key.startsWith('level_') || key === 'stars_used') {
                         localStorage.removeItem(key);
                     }
                 });
@@ -2159,6 +2493,10 @@
                 return total;
             },
 
+            getAvailableStars() {
+                return this.getTotalStars();
+            },
+
             hasThreeStars() {
                 let found = false;
                 Levels.forEach(level => {
@@ -2212,6 +2550,13 @@
                     `;
                     practiceContainer.appendChild(card);
                 });
+
+                // 更新可用星星顯示
+                const starsDisplay = document.getElementById('availableStarsDisplay');
+                if (starsDisplay) {
+                    const available = this.getAvailableStars();
+                    starsDisplay.textContent = `🌟 當前可用星星: ${available} 🌟`;
+                }
             },
 
             openDifficultyModal(levelId) {
@@ -2229,14 +2574,16 @@
             showScreen(screen) {
                 const map = document.getElementById('levelMap');
                 const practice = document.querySelector('.practice-section');
+                const miniGame = document.querySelector('.mini-game-section');
                 const reset = document.getElementById('resetSection');
                 const title = document.querySelector('.game-title');
                 const game = document.getElementById('gameScreen');
                 const result = document.getElementById('resultScreen');
                 const bonusGame = document.getElementById('bonusScreen');
+                const match3Game = document.getElementById('match3Screen');
 
                 // 隱藏所有畫面
-                [map, practice, reset, title, game, result, bonusGame].forEach(el => {
+                [map, practice, miniGame, reset, title, game, result, bonusGame, match3Game].forEach(el => {
                     if (el) {
                         el.style.display = 'none';
                         el.classList.remove('active');
@@ -2246,6 +2593,7 @@
                 if (screen === 'map') {
                     map.style.display = 'grid';
                     practice.style.display = 'block';
+                    if (miniGame) miniGame.style.display = 'block';
                     if (reset) reset.style.display = 'block';
                     title.style.display = 'block';
                     this.renderLevelMap();
@@ -2258,6 +2606,9 @@
                 } else if (screen === 'bonus') {
                     bonusGame.style.display = 'block';
                     bonusGame.classList.add('active');
+                } else if (screen === 'match3') {
+                    match3Game.style.display = 'block';
+                    match3Game.classList.add('active');
                 }
             },
 
