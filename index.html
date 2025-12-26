@@ -62,7 +62,40 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 5px;
+            max-width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+        }
+
+        .coin-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: center;
+            width: 100%;
+            gap: 5px;
+            margin-bottom: 5px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        .coin-row-count {
+            margin-left: auto;
+            font-weight: bold;
+            color: #333;
+            font-size: 1.2em;
+            padding: 0 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .coin-row:last-child {
+            margin-bottom: 0;
         }
 
         .coin-wrapper {
@@ -70,16 +103,25 @@
             flex-direction: column;
             align-items: center;
             background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 5px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .coin-img {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 5px;
+            width: clamp(40px, 10vw, 60px);
+            height: auto;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        .coin-img svg {
+            width: 100%;
+            height: 100%;
+            max-height: 60px;
         }
 
         .coin-count {
@@ -871,10 +913,12 @@
                 while (options.length < 4) {
                     let option;
                     if (typeof correctAnswer === 'number') {
-                        const offset = Math.floor(Math.random() * 20) - 10;
+                        // 根據正確答案的大小來決定偏移量，避免在大數額時偏移太小
+                        const magnitude = Math.max(10, Math.pow(10, Math.floor(Math.log10(correctAnswer || 1)) - 1));
+                        const offset = (Math.floor(Math.random() * 21) - 10) * magnitude;
                         option = correctAnswer + offset;
                         if (option < 0) option = Math.abs(option);
-                        if (option > range) option = option % range;
+                        if (option > range) option = option % (range + 1);
                     } else {
                         option = Math.floor(Math.random() * range);
                     }
@@ -1001,7 +1045,9 @@
                     5: { bg: '#95a5a6', border: '#7f8c8d', text: '#fff' },
                     10: { bg: '#f1c40f', border: '#f39c12', text: '#8b4513' },
                     50: { bg: '#f1c40f', border: '#d35400', text: '#8b4513' },
-                    100: { bg: '#e74c3c', border: '#c0392b', text: '#fff' }
+                    100: { bg: '#e74c3c', border: '#c0392b', text: '#fff' },
+                    500: { bg: '#2ecc71', border: '#27ae60', text: '#fff' },
+                    1000: { bg: '#3498db', border: '#2980b9', text: '#fff' }
                 };
                 const c = colors[value] || colors[1];
                 const isBill = value >= 100;
@@ -1251,30 +1297,38 @@
                         { value: 5, max: 5 },
                         { value: 10, max: 5 },
                         { value: 50, max: 2 },
-                        { value: 100, max: 2 }
+                        { value: 100, max: 2 },
+                        { value: 500, max: 2 },
+                        { value: 1000, max: 1 }
                     ];
 
-                    // 隨機選取 2-3 種錢幣
-                    const selectedConfigs = Utils.shuffleArray(coinConfigs).slice(0, isEasy ? 2 : 3);
+                    // 隨機選取 2-4 種錢幣
+                    const selectedConfigs = Utils.shuffleArray(coinConfigs).slice(0, isEasy ? 2 : 4);
+                    // 按照幣值大到小排序，視覺上比較整齊
+                    selectedConfigs.sort((a, b) => b.value - a.value);
                     let total = 0;
                     let coinsHtml = '';
 
                     selectedConfigs.forEach(config => {
                         const count = Math.floor(Math.random() * config.max) + 1;
                         total += config.value * count;
-                        coinsHtml += `
-                            <div class="coin-wrapper">
-                                <div class="coin-img">${Utils.getCoinSvg(config.value)}</div>
-                                <div class="coin-count">x ${count}</div>
-                            </div>
-                        `;
+                        coinsHtml += `<div class="coin-row">`;
+                        for (let i = 0; i < count; i++) {
+                            coinsHtml += `
+                                <div class="coin-wrapper" style="margin: 2px;">
+                                    <div class="coin-img">${Utils.getCoinSvg(config.value)}</div>
+                                </div>
+                            `;
+                        }
+                        coinsHtml += `<div class="coin-row-count">x ${count}</div>`;
+                        coinsHtml += `</div>`;
                     });
 
                     return {
                         question: `你有這些錢，總共有多少元？`,
                         coinsHtml: coinsHtml,
                         answer: total,
-                        options: Utils.generateOptions(total, isEasy ? 100 : 500)
+                        options: Utils.generateOptions(total, isEasy ? 100 : 3000)
                     };
                 }
             },
