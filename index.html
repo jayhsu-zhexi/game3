@@ -484,6 +484,28 @@
             transform: scale(1.05);
         }
 
+        .reset-container {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+        }
+
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 0, 0, 0.4);
+            border-color: #ff6b6b;
+        }
+
         .question-area {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             border-radius: 20px;
@@ -798,6 +820,58 @@
                 padding: 18px;
             }
         }
+        /* 獎勵遊戲畫面樣式 */
+        #bonusGameContainer {
+            touch-action: none;
+            user-select: none;
+        }
+
+        .falling-star {
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #basket {
+            font-size: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+        }
+
+        @keyframes rainbowStar {
+            0% { filter: hue-rotate(0deg) drop-shadow(0 0 8px #fff); }
+            100% { filter: hue-rotate(360deg) drop-shadow(0 0 12px #fff); }
+        }
+
+        /* 加分/扣分特效樣式 */
+        .score-effect {
+            position: absolute;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 24px;
+            animation: scoreFloat 0.8s ease-out forwards;
+            z-index: 120;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        @keyframes scoreFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+
+        .catch-ripple {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: rippleEffect 0.5s ease-out forwards;
+            z-index: 115;
+        }
+
+        @keyframes rippleEffect {
+            0% { width: 0; height: 0; opacity: 0.8; border: 2px solid white; }
+            100% { width: 100px; height: 100px; opacity: 0; border: 10px solid white; transform: translate(-50px, -50px); }
+        }
     </style>
 </head>
 
@@ -816,6 +890,11 @@
         <div class="practice-section">
             <h2 class="practice-title">🔥 特別練習區 🔥</h2>
             <div id="practiceMap" class="practice-map"></div>
+        </div>
+
+        <!-- 重置進度區域 -->
+        <div id="resetSection" class="reset-container">
+            <button class="reset-btn" onclick="UIManager.confirmReset()">🗑️ 清除所有星星記錄</button>
         </div>
 
         <!-- 難度選擇彈窗 -->
@@ -871,13 +950,303 @@
             <div id="resultStars" class="result-stars"></div>
             <div id="resultMessage" class="result-message"></div>
             <div class="result-buttons">
+                <button id="bonusBtn" class="result-btn" style="display: none; background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: white; width: 100%; margin-bottom: 10px;" onclick="BonusGame.start()">🌟 進入小遊戲獎勵 🌟</button>
                 <button class="result-btn retry-btn" onclick="GameEngine.retryLevel()">再玩一次</button>
                 <button class="result-btn home-btn" onclick="GameEngine.backToMap()">返回地圖</button>
             </div>
         </div>
+
+        <!-- 獎勵遊戲畫面 -->
+        <div id="bonusScreen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">星星收集大作戰</div>
+                    <div class="info-item">得分: <span id="bonusScore">0</span></div>
+                </div>
+                <button class="back-btn" onclick="BonusGame.stop()">結束遊戲</button>
+            </div>
+            <div id="bonusGameContainer" style="position: relative; width: 100%; height: 400px; background: linear-gradient(to bottom, #1a2a6c, #b21f1f, #fdbb2d); overflow: hidden; border-radius: 15px; cursor: crosshair;">
+                <!-- 遊戲元素將由 JS 動態生成 -->
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666;">移動籃子接住掉落的星星吧！</p>
+        </div>
     </div>
 
     <script>
+        // 獎勵小遊戲邏輯
+        const BonusGame = {
+            score: 0,
+            gameActive: false,
+            stars: [],
+            basketPos: 50,
+            animationId: null,
+            spawnTimer: null,
+
+            start() {
+                const unlocked = UIManager.hasThreeStars();
+                if (!unlocked) {
+                    alert(`🌟 在任一關卡獲得 3 顆星星即可解鎖獎勵遊戲喔！繼續加油！`);
+                    return;
+                }
+
+                this.score = 0;
+                this.gameActive = true;
+                this.stars = [];
+                this.basketPos = 50;
+                
+                UIManager.showScreen('bonus');
+                this.initUI();
+                this.gameLoop();
+                this.spawnStar();
+            },
+
+            stop() {
+                this.gameActive = false;
+                cancelAnimationFrame(this.animationId);
+                clearTimeout(this.spawnTimer);
+                UIManager.showScreen('map');
+            },
+
+            winGame() {
+                if (!this.gameActive) return;
+                this.gameActive = false;
+                cancelAnimationFrame(this.animationId);
+                clearTimeout(this.spawnTimer);
+                
+                // 播放勝利音效
+                AudioSystem.playComplete();
+                
+                // 清理剩餘星星
+                const container = document.getElementById('bonusGameContainer');
+                if (container) {
+                    const stars = container.querySelectorAll('.falling-star');
+                    stars.forEach(s => s.remove());
+                    
+                    // 建立過關畫面層
+                    const winOverlay = document.createElement('div');
+                    winOverlay.id = 'winOverlay';
+                    winOverlay.style.cssText = `
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.8);
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        z-index: 200;
+                        animation: modalSlideIn 0.5s ease;
+                        text-align: center;
+                        padding: 20px;
+                    `;
+                    
+                    winOverlay.innerHTML = `
+                        <h2 style="font-size: clamp(28px, 6vw, 40px); color: #ffd700; margin-bottom: 15px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">🎊 恭喜過關 🎊</h2>
+                        <div style="font-size: 60px; margin-bottom: 15px;">⭐⭐⭐</div>
+                        <p style="font-size: clamp(18px, 4vw, 22px); margin-bottom: 25px;">太厲害了！你收集滿 100 分了！<br>你是真正的星星收集大師！</p>
+                        <button class="result-btn home-btn" style="min-width: 200px;" onclick="BonusGame.stop()">返回地圖</button>
+                    `;
+                    container.appendChild(winOverlay);
+                }
+            },
+
+            initUI() {
+                const container = document.getElementById('bonusGameContainer');
+                container.innerHTML = `
+                    <div id="basket" style="position: absolute; bottom: 10px; left: 50%; width: 80px; height: 50px; transform: translateX(-50%); transition: left 0.05s linear; cursor: pointer;">🧺</div>
+                `;
+                document.getElementById('bonusScore').textContent = '0';
+
+                const handleMove = (e) => {
+                    if (!this.gameActive) return;
+                    const rect = container.getBoundingClientRect();
+                    let clientX;
+                    if (e.touches && e.touches.length > 0) {
+                        clientX = e.touches[0].clientX;
+                    } else {
+                        clientX = e.clientX;
+                    }
+                    const x = clientX - rect.left;
+                    this.basketPos = Math.max(5, Math.min(95, (x / rect.width) * 100));
+                    const basket = document.getElementById('basket');
+                    if (basket) basket.style.left = this.basketPos + '%';
+                };
+
+                container.onmousemove = handleMove;
+                container.ontouchmove = (e) => {
+                    handleMove(e);
+                    if (e.cancelable) e.preventDefault();
+                };
+            },
+
+            spawnStar() {
+                if (!this.gameActive) return;
+                
+                const id = Date.now() + Math.random();
+                const rand = Math.random();
+                
+                // 定義不同類型的掉落物
+                // 黃色星星: 70%, 紅色星星: 15%, 彩色星星: 5%, 炸彈: 10%
+                let typeConfig = { 
+                    icon: '★', 
+                    score: 1, 
+                    style: 'color: #ffd700; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));' 
+                };
+
+                if (rand < 0.05) { // 彩色星星 (3分)
+                    typeConfig = { 
+                        icon: '★', 
+                        score: 3, 
+                        style: 'color: #ff00ea; animation: rainbowStar 0.8s linear infinite;' 
+                    };
+                } else if (rand < 0.20) { // 紅色星星 (2分)
+                    typeConfig = { 
+                        icon: '★', 
+                        score: 2, 
+                        style: 'color: #ff0000; filter: drop-shadow(0 0 3px rgba(255,255,255,0.8));' 
+                    };
+                } else if (rand < 0.30) { // 炸彈 (-1分)
+                    typeConfig = { 
+                        icon: '💣', 
+                        score: -1, 
+                        style: '' 
+                    };
+                }
+
+                const star = {
+                    id: id,
+                    x: Math.random() * 90 + 5,
+                    y: -40,
+                    speed: Math.random() * 3 + 2,
+                    score: typeConfig.score
+                };
+                this.stars.push(star);
+                
+                const starEl = document.createElement('div');
+                starEl.id = `star-${id}`;
+                starEl.className = 'falling-star';
+                starEl.style.position = 'absolute';
+                starEl.style.left = star.x + '%';
+                starEl.style.top = star.y + 'px';
+                starEl.innerHTML = `<span style="${typeConfig.style}">${typeConfig.icon}</span>`;
+                starEl.style.fontSize = '35px';
+                document.getElementById('bonusGameContainer').appendChild(starEl);
+
+                this.spawnTimer = setTimeout(() => this.spawnStar(), 800);
+            },
+
+            gameLoop() {
+                if (!this.gameActive) return;
+
+                const container = document.getElementById('bonusGameContainer');
+                if (!container) {
+                    this.stop();
+                    return;
+                }
+                const containerHeight = container.offsetHeight || 400;
+
+                for (let i = this.stars.length - 1; i >= 0; i--) {
+                    const star = this.stars[i];
+                    star.y += star.speed;
+                    
+                    const starEl = document.getElementById(`star-${star.id}`);
+                    if (starEl) {
+                        starEl.style.top = star.y + 'px';
+
+                        // 碰撞檢測
+                        if (star.y > containerHeight - 80 && star.y < containerHeight - 30) {
+                            if (Math.abs(star.x - this.basketPos) < 10) {
+                                this.score += star.score;
+                                if (this.score < 0) this.score = 0; // 分數不低於 0
+                                
+                                const scoreEl = document.getElementById('bonusScore');
+                                if (scoreEl) scoreEl.textContent = this.score;
+                                this.createCatchEffect(star.x, star.y, star.score);
+                                starEl.remove();
+                                this.stars.splice(i, 1);
+                                
+                                if (star.score > 0) {
+                                    AudioSystem.playCorrect();
+                                    const basket = document.getElementById('basket');
+                                    if (basket) {
+                                        basket.style.filter = 'brightness(1.2) drop-shadow(0 0 10px #ffd700)';
+                                        setTimeout(() => { if (basket && basket.style) basket.style.filter = ''; }, 200);
+                                    }
+
+                                    // 檢查是否達到 100 分
+                                    if (this.score >= 100) {
+                                        setTimeout(() => this.winGame(), 200);
+                                        return;
+                                    }
+                                } else {
+                                    AudioSystem.playWrong();
+                                    const basket = document.getElementById('basket');
+                                    if (basket) {
+                                        basket.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)';
+                                        setTimeout(() => { if (basket && basket.style) basket.style.filter = ''; }, 300);
+                                    }
+                                }
+                                continue;
+                            }
+                        }
+
+                        if (star.y > containerHeight) {
+                            starEl.remove();
+                            this.stars.splice(i, 1);
+                        }
+                    } else {
+                        // 如果元素消失了但資料還在，也清理掉
+                        this.stars.splice(i, 1);
+                    }
+                }
+
+                this.animationId = requestAnimationFrame(() => this.gameLoop());
+            },
+
+            createCatchEffect(x, y, score) {
+                const container = document.getElementById('bonusGameContainer');
+                if (!container) return;
+
+                // 分數浮動文字
+                const effect = document.createElement('div');
+                effect.className = 'score-effect';
+                effect.style.left = x + '%';
+                effect.style.top = y + 'px';
+                effect.style.transform = 'translateX(-50%)';
+                
+                if (score > 0) {
+                    effect.textContent = `+${score}`;
+                    effect.style.color = '#ffff00';
+                } else {
+                    effect.innerHTML = '💥 -1';
+                    effect.style.color = '#ff4d4d';
+                    effect.style.fontSize = '32px';
+                }
+                
+                container.appendChild(effect);
+                
+                // 擴散漣漪效果
+                const ripple = document.createElement('div');
+                ripple.className = 'catch-ripple';
+                ripple.style.left = x + '%';
+                ripple.style.top = y + 'px';
+                if (score < 0) {
+                    ripple.style.borderColor = '#ff0000';
+                    ripple.style.borderWidth = '4px';
+                }
+                container.appendChild(ripple);
+
+                // 自動清理
+                setTimeout(() => {
+                    if (effect.parentNode) effect.remove();
+                    if (ripple.parentNode) ripple.remove();
+                }, 1000);
+            }
+        };
+
         const STORY_MAZE_HARD_QUESTIONS = [
             { q: "小光有38塊積木，小華給他16塊後，小光又借給同學15塊，小光現在有幾塊積木？", options: ["39塊", "37塊", "22塊", "7塊"], answer: "39塊" },
             { q: "小傑家裡有24本故事書，爸爸又買了18本，爺爺也送來15本，現在小傑家一共有幾本故事書？", options: ["57本", "49本", "42本", "62本"], answer: "57本" },
@@ -942,21 +1311,28 @@
             },
             generateOptions(correctAnswer, range) {
                 const options = [correctAnswer];
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 100) {
+                    attempts++;
                     let option;
                     if (typeof correctAnswer === 'number') {
                         // 根據正確答案的大小來決定偏移量，避免在大數額時偏移太小
-                        const magnitude = Math.max(10, Math.pow(10, Math.floor(Math.log10(correctAnswer || 1)) - 1));
+                        const magnitude = Math.max(1, Math.pow(10, Math.floor(Math.log10(correctAnswer || 1)) - 1));
                         const offset = (Math.floor(Math.random() * 21) - 10) * magnitude;
                         option = correctAnswer + offset;
                         if (option < 0) option = Math.abs(option);
-                        if (option > range) option = option % (range + 1);
+                        if (option > range && range > 0) option = option % (range + 1);
                     } else {
                         option = Math.floor(Math.random() * range);
                     }
                     if (!options.includes(option) && option >= 0) {
                         options.push(option);
                     }
+                }
+                // 如果失敗，強制填滿
+                while (options.length < 4) {
+                    const lastOption = options[options.length - 1];
+                    options.push(typeof lastOption === 'number' ? lastOption + 1 : options.length);
                 }
                 return this.shuffleArray(options);
             },
@@ -979,12 +1355,19 @@
                     }
                     possibleAnswers.splice(randomIndex, 1);
                 }
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 100) {
+                    attempts++;
                     const offset = Math.floor(Math.random() * 10) + 1;
                     const option = Math.random() > 0.5 ? correct + offset : correct - offset;
                     if (option > 0 && !options.includes(option)) {
                         options.push(option);
                     }
+                }
+                // 如果失敗，強制填滿
+                while (options.length < 4) {
+                    const lastOption = options[options.length - 1];
+                    options.push(lastOption + 1);
                 }
                 return this.shuffleArray(options);
             },
@@ -1059,12 +1442,19 @@
                 });
 
                 // 如果還不足 4 個，使用隨機偏移
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 100) {
+                    attempts++;
                     const offset = Math.floor(Math.random() * 10) + 1;
                     const opt = Math.random() > 0.5 ? ans + offset : ans - offset;
                     if (opt > 0 && !options.includes(opt)) options.push(opt);
                 }
-
+                // 如果失敗，強制填滿
+                while (options.length < 4) {
+                    const lastOption = options[options.length - 1];
+                    options.push(lastOption + 1);
+                }
+                
                 return {
                     question: q,
                     answer: ans + unit,
@@ -1105,46 +1495,71 @@
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
             },
             playCorrect() {
-                if (!this.context) this.init();
-                const oscillator = this.context.createOscillator();
-                const gainNode = this.context.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(this.context.destination);
-                oscillator.frequency.setValueAtTime(523.25, this.context.currentTime);
-                oscillator.frequency.setValueAtTime(659.25, this.context.currentTime + 0.1);
-                oscillator.frequency.setValueAtTime(783.99, this.context.currentTime + 0.2);
-                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
-                oscillator.start(this.context.currentTime);
-                oscillator.stop(this.context.currentTime + 0.3);
-            },
-            playWrong() {
-                if (!this.context) this.init();
-                const oscillator = this.context.createOscillator();
-                const gainNode = this.context.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(this.context.destination);
-                oscillator.frequency.setValueAtTime(200, this.context.currentTime);
-                oscillator.type = 'sawtooth';
-                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
-                oscillator.start(this.context.currentTime);
-                oscillator.stop(this.context.currentTime + 0.2);
-            },
-            playComplete() {
-                if (!this.context) this.init();
-                const notes = [523.25, 587.33, 659.25, 783.99];
-                notes.forEach((freq, i) => {
+                try {
+                    if (!this.context) this.init();
+                    if (this.context.state === 'suspended') this.context.resume();
                     const oscillator = this.context.createOscillator();
                     const gainNode = this.context.createGain();
                     oscillator.connect(gainNode);
                     gainNode.connect(this.context.destination);
-                    oscillator.frequency.setValueAtTime(freq, this.context.currentTime + i * 0.15);
-                    gainNode.gain.setValueAtTime(0.2, this.context.currentTime + i * 0.15);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + i * 0.15 + 0.3);
-                    oscillator.start(this.context.currentTime + i * 0.15);
-                    oscillator.stop(this.context.currentTime + i * 0.15 + 0.3);
-                });
+                    oscillator.frequency.setValueAtTime(523.25, this.context.currentTime);
+                    oscillator.frequency.setValueAtTime(659.25, this.context.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(783.99, this.context.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
+                    oscillator.start(this.context.currentTime);
+                    oscillator.stop(this.context.currentTime + 0.3);
+                } catch (e) {
+                    console.error('Audio play error:', e);
+                }
+            },
+            playWrong() {
+                try {
+                    if (!this.context) this.init();
+                    if (this.context.state === 'suspended') this.context.resume();
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    oscillator.frequency.setValueAtTime(200, this.context.currentTime);
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
+                    oscillator.start(this.context.currentTime);
+                    oscillator.stop(this.context.currentTime + 0.2);
+                } catch (e) {
+                    console.error('Audio play error:', e);
+                }
+            },
+            playComplete() {
+                try {
+                    if (!this.context) this.init();
+                    if (this.context.state === 'suspended') {
+                        this.context.resume().then(() => this._playCompleteNotes());
+                    } else {
+                        this._playCompleteNotes();
+                    }
+                } catch (e) {
+                    console.error('Audio play error:', e);
+                }
+            },
+            _playCompleteNotes() {
+                try {
+                    const notes = [523.25, 587.33, 659.25, 783.99];
+                    notes.forEach((freq, i) => {
+                        const oscillator = this.context.createOscillator();
+                        const gainNode = this.context.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(this.context.destination);
+                        oscillator.frequency.setValueAtTime(freq, this.context.currentTime + i * 0.15);
+                        gainNode.gain.setValueAtTime(0.2, this.context.currentTime + i * 0.15);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + i * 0.15 + 0.3);
+                        oscillator.start(this.context.currentTime + i * 0.15);
+                        oscillator.stop(this.context.currentTime + i * 0.15 + 0.3);
+                    });
+                } catch (e) {
+                    console.error('Notes play error:', e);
+                }
             }
         };
 
@@ -1446,7 +1861,9 @@
                 if (!options.includes(opt2)) options.push(opt2);
             }
 
-            while (options.length < 4) {
+            let attempts = 0;
+            while (options.length < 4 && attempts < 100) {
+                attempts++;
                 // 步驟 1: 讓小時 h 接近答案 hour (+- 1 小時)
                 let h;
                 const hourRange = 1; // 接近範圍：+- 1 小時
@@ -1479,6 +1896,13 @@
                 if (!options.includes(option)) {
                     options.push(option);
                 }
+            }
+
+            // 如果失敗，強制填滿
+            while (options.length < 4) {
+                const lastOption = options[options.length - 1];
+                const [h, m] = lastOption.split(':').map(Number);
+                options.push(formatTime(h, (m + 5) % 60));
             }
             return Utils.shuffleArray(options);
         }
@@ -1536,6 +1960,14 @@
                 if (stars > current) {
                     localStorage.setItem(key, stars);
                 }
+            },
+            clearAllRecords() {
+                const keys = Object.keys(localStorage);
+                keys.forEach(key => {
+                    if (key.startsWith('level_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
             }
         };
 
@@ -1609,65 +2041,95 @@
             },
 
             checkAnswer(selected, btnElement) {
-                const currentQuestion = this.state.isPracticeMode 
-                    ? this.state.lastPracticeQuestion
-                    : this.state.questions[this.state.questionIndex];
-                
-                const isCorrect = selected === currentQuestion.answer;
-                this.handleAnswer(isCorrect, selected, currentQuestion.answer, btnElement);
+                try {
+                    const currentQuestion = this.state.isPracticeMode 
+                        ? this.state.lastPracticeQuestion
+                        : this.state.questions[this.state.questionIndex];
+                    
+                    if (!currentQuestion) {
+                        console.error('Current question is undefined');
+                        this.nextQuestion();
+                        return;
+                    }
+
+                    const isCorrect = selected === currentQuestion.answer;
+                    this.handleAnswer(isCorrect, selected, currentQuestion.answer, btnElement);
+                } catch (e) {
+                    console.error('Error in checkAnswer:', e);
+                    this.nextQuestion();
+                }
             },
 
             generateNewPracticeQuestion() {
-                const question = this.state.currentLevel.generateQuestion(this.state.difficulty);
-                this.state.lastPracticeQuestion = question;
-                UIManager.renderQuestion(question, (selected, btn) => this.checkAnswer(selected, btn));
+                try {
+                    const question = this.state.currentLevel.generateQuestion(this.state.difficulty);
+                    this.state.lastPracticeQuestion = question;
+                    UIManager.renderQuestion(question, (selected, btn) => this.checkAnswer(selected, btn));
+                } catch (e) {
+                    console.error('Error in generateNewPracticeQuestion:', e);
+                }
             },
 
             handleAnswer(isCorrect, selected, correctAnswer, btnElement) {
-                UIManager.disableAnswerButtons();
+                try {
+                    UIManager.disableAnswerButtons();
 
-                if (isCorrect) {
-                    btnElement.classList.add('correct');
-                    AudioSystem.playCorrect();
-                    this.state.correctCount++;
-                    
-                    setTimeout(() => {
-                        this.nextQuestion();
-                    }, 1000);
-                } else {
-                    btnElement.classList.add('wrong');
-                    AudioSystem.playWrong();
-                    this.state.errors++;
-                    UIManager.updateErrorCount(this.state.errors);
-                    UIManager.highlightCorrectAnswer(correctAnswer);
-
-                    if (!this.state.isPracticeMode && this.state.errors >= 3) {
-                        setTimeout(() => this.endGame(), 1000);
+                    if (isCorrect) {
+                        if (btnElement) btnElement.classList.add('correct');
+                        AudioSystem.playCorrect();
+                        this.state.correctCount++;
+                        
+                        setTimeout(() => {
+                            this.nextQuestion();
+                        }, 1000);
                     } else {
-                        setTimeout(() => this.nextQuestion(), this.state.isPracticeMode ? 2000 : 1000);
+                        if (btnElement) btnElement.classList.add('wrong');
+                        AudioSystem.playWrong();
+                        this.state.errors++;
+                        UIManager.updateErrorCount(this.state.errors);
+                        UIManager.highlightCorrectAnswer(correctAnswer);
+
+                        if (!this.state.isPracticeMode && this.state.errors >= 3) {
+                            setTimeout(() => this.endGame(), 1000);
+                        } else {
+                            setTimeout(() => this.nextQuestion(), this.state.isPracticeMode ? 2000 : 1000);
+                        }
                     }
+                } catch (e) {
+                    console.error('Error in handleAnswer:', e);
+                    this.nextQuestion();
                 }
             },
 
             nextQuestion() {
-                this.state.questionIndex++;
-                if (!this.state.isPracticeMode && this.state.questionIndex >= this.state.totalQuestions) {
-                    this.endGame();
-                } else {
-                    if (this.state.isPracticeMode) {
-                        UIManager.updatePracticeUI();
-                        this.generateNewPracticeQuestion();
+                try {
+                    this.state.questionIndex++;
+                    if (!this.state.isPracticeMode && this.state.questionIndex >= this.state.totalQuestions) {
+                        this.endGame();
                     } else {
-                        UIManager.updateGameUI();
-                        this.showQuestion();
+                        if (this.state.isPracticeMode) {
+                            UIManager.updatePracticeUI();
+                            this.generateNewPracticeQuestion();
+                        } else {
+                            UIManager.updateGameUI();
+                            this.showQuestion();
+                        }
                     }
+                } catch (e) {
+                    console.error('Error in nextQuestion:', e);
+                    this.endGame();
                 }
             },
 
             endGame() {
-                const stars = this.calculateStars();
-                Storage.saveRecord(this.state.currentLevel.id, this.state.difficulty, stars);
-                UIManager.showResult(stars, this.state.correctCount, this.state.totalQuestions);
+                try {
+                    const stars = this.calculateStars();
+                    Storage.saveRecord(this.state.currentLevel.id, this.state.difficulty, stars);
+                    UIManager.showResult(stars, this.state.correctCount, this.state.totalQuestions);
+                } catch (e) {
+                    console.error('Error in endGame:', e);
+                    UIManager.showScreen('map');
+                }
             },
 
             calculateStars() {
@@ -1688,6 +2150,25 @@
         };
 
         const UIManager = {
+            getTotalStars() {
+                let total = 0;
+                Levels.forEach(level => {
+                    total += Storage.getRecord(level.id, 'easy');
+                    total += Storage.getRecord(level.id, 'hard');
+                });
+                return total;
+            },
+
+            hasThreeStars() {
+                let found = false;
+                Levels.forEach(level => {
+                    if (Storage.getRecord(level.id, 'easy') === 3 || Storage.getRecord(level.id, 'hard') === 3) {
+                        found = true;
+                    }
+                });
+                return found;
+            },
+
             renderLevelMap() {
                 const mapContainer = document.getElementById('levelMap');
                 mapContainer.innerHTML = '';
@@ -1748,23 +2229,35 @@
             showScreen(screen) {
                 const map = document.getElementById('levelMap');
                 const practice = document.querySelector('.practice-section');
+                const reset = document.getElementById('resetSection');
                 const title = document.querySelector('.game-title');
                 const game = document.getElementById('gameScreen');
                 const result = document.getElementById('resultScreen');
+                const bonusGame = document.getElementById('bonusScreen');
+
+                // 隱藏所有畫面
+                [map, practice, reset, title, game, result, bonusGame].forEach(el => {
+                    if (el) {
+                        el.style.display = 'none';
+                        el.classList.remove('active');
+                    }
+                });
 
                 if (screen === 'map') {
-                    game.classList.remove('active');
-                    result.classList.remove('active');
                     map.style.display = 'grid';
                     practice.style.display = 'block';
+                    if (reset) reset.style.display = 'block';
                     title.style.display = 'block';
                     this.renderLevelMap();
                 } else if (screen === 'game') {
-                    map.style.display = 'none';
-                    practice.style.display = 'none';
-                    title.style.display = 'none';
+                    game.style.display = 'block';
                     game.classList.add('active');
-                    result.classList.remove('active');
+                } else if (screen === 'result') {
+                    result.style.display = 'block';
+                    result.classList.add('active');
+                } else if (screen === 'bonus') {
+                    bonusGame.style.display = 'block';
+                    bonusGame.classList.add('active');
                 }
             },
 
@@ -1847,13 +2340,15 @@
             },
 
             showResult(stars, correctCount, totalQuestions) {
-                document.getElementById('gameScreen').classList.remove('active');
-                const resultScreen = document.getElementById('resultScreen');
-                resultScreen.classList.add('active');
-
+                this.showScreen('result');
                 const resultTitle = document.getElementById('resultTitle');
                 const resultStars = document.getElementById('resultStars');
                 const resultMessage = document.getElementById('resultMessage');
+                const bonusBtn = document.getElementById('bonusBtn');
+
+                if (bonusBtn) {
+                    bonusBtn.style.display = stars === 3 ? 'block' : 'none';
+                }
 
                 if (stars === 3) {
                     resultTitle.textContent = '太棒了！完美過關！';
@@ -1877,6 +2372,14 @@
             confirmExit() {
                 if (confirm('確定要離開遊戲嗎？進度將不會保存。')) {
                     GameEngine.backToMap();
+                }
+            },
+
+            confirmReset() {
+                if (confirm('確定要清除所有獲得的星星嗎？這項動作無法復原喔！')) {
+                    Storage.clearAllRecords();
+                    this.renderLevelMap();
+                    alert('已清除所有星星記錄！');
                 }
             }
         };
