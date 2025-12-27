@@ -1001,6 +1001,57 @@
             content: '🌳';
             font-size: 1.2em;
         }
+
+        /* 平板橫向優化：記憶卡片改為橫向排列與比例 */
+        @media (orientation: landscape) and (min-width: 768px) and (max-width: 1199px) {
+            .memory-grid {
+                grid-template-columns: repeat(6, 1fr); /* 6 欄 x 4 列 = 24 張卡片，較適合橫向 */
+                max-width: 900px;
+                gap: 12px;
+            }
+            .memory-card {
+                aspect-ratio: 4 / 3; /* 改為橫向比例 */
+            }
+            .card-face {
+                font-size: clamp(28px, 6vw, 48px); /* 調整字體避免過大 */
+            }
+        }
+
+        /* 大螢幕橫向（桌機橫放或大型平板）可再放寬一點 */
+        @media (orientation: landscape) and (min-width: 1200px) {
+            .memory-grid {
+                grid-template-columns: repeat(6, 1fr);
+                max-width: 1000px;
+                gap: 14px;
+            }
+            .memory-card { aspect-ratio: 4 / 3; }
+        }
+
+        /* 平板直向：確保24張卡片能在單一畫面顯示（4欄 x 6列）*/
+        @media (orientation: portrait) and (min-width: 768px) and (max-width: 1199px) {
+            #memoryScreen { overflow: hidden; }
+            #memoryScreen > p { display: none; } /* 隱藏提示文字以節省垂直空間 */
+            .memory-grid {
+                /* 仍然是4欄排列，但縮放以保證6列在可視高度內 */
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                max-width: none; /* 使用計算寬度以符合高度 */
+                /* 預留上方標題/按鈕等UI高度，避免需要捲動 */
+                --ui-reserve: 240px;
+                width: min(
+                    95vw,
+                    calc( ((((100vh - var(--ui-reserve)) - (5 * 8px)) / 6) * (3 / 4) * 4) + (3 * 8px) )
+                );
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .memory-card {
+                aspect-ratio: 3 / 4; /* 直向比例，便於在縱向螢幕排6列 */
+            }
+            .card-face {
+                font-size: clamp(22px, 5.2vw, 40px);
+            }
+        }
     </style>
 </head>
 
