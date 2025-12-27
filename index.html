@@ -1229,11 +1229,17 @@
         <div id="adminGameModal" class="modal">
             <div class="modal-content">
                 <h2>管理者設定</h2>
-                <div class="difficulty-buttons">
-                    <button class="difficulty-btn" style="background: linear-gradient(135deg,#ffd700,#ff8c00); color:#fff;" onclick="UIManager.closeAdminModal(); BonusGame.start(true)">🌟 通關後小遊戲</button>
+                <div style="margin-bottom:8px; font-weight:bold; color:#2e7d32;">🏆 通關後小遊戲</div>
+                <div class="difficulty-buttons" style="margin-bottom:14px;">
+                    <button class="difficulty-btn" style="background: linear-gradient(135deg,#ffd700,#ff8c00); color:#fff;" onclick="UIManager.closeAdminModal(); BonusGame.start(true)">🌟 星星收集大作戰</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); ShootingGame.start(true)">🎯 森林射擊戰</button>
+                </div>
+                <div style="margin:10px 0 8px; font-weight:bold; color:#1565c0;">🎮 迷你遊戲區</div>
+                <div class="difficulty-buttons" style="margin-bottom:14px;">
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); Match3Game.start(true)">🍓 森林消消樂</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
-                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); ShootingGame.start(true)">🎯 森林射擊戰</button>
+                </div>
+                <div class="difficulty-buttons">
                     <button class="difficulty-btn close-modal" onclick="UIManager.closeAdminModal()">關閉</button>
                 </div>
             </div>
@@ -1921,7 +1927,7 @@
             enemyTypes: [
                 { name: 'ghost', icon: '👻', score: 1, color: '#66e3ff', speedMin: 0.04, speedMax: 0.07 },
                 { name: 'bat',   icon: '🦇', score: 2, color: '#ffd54f', speedMin: 0.05, speedMax: 0.08 },
-                { name: 'ogre',  icon: '👹', score: 3, color: '#ff5252', speedMin: 0.035, speedMax: 0.06 },
+                { name: 'ogre',  icon: '👹', score: 3, color: '#ff5252', speedMin: 0.03, speedMax: 0.05 },
                 { name: 'skull', icon: '💀', score: -1, color: '#ff1744', speedMin: 0.06, speedMax: 0.10 }
             ],
             enemyWeights: [0.5, 0.25, 0.15, 0.10],
