@@ -1025,6 +1025,27 @@
         .shooter-legend .text { font-weight: 700; text-shadow: 0 2px 3px rgba(0,0,0,0.4); }
         @media (max-width: 480px) { .shooter-legend { font-size: 12px; padding: 5px 6px; } .shooter-legend .icon { font-size: 16px; width: 18px; } }
 
+        /* 射擊遊戲：頂部分數顯示（置中疊在遊戲畫面上方） */
+        .shooter-score {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 12px;
+            padding: 6px 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            z-index: 7;
+            pointer-events: none;
+        }
+        @media (max-width: 480px) {
+            .shooter-score { padding: 4px 10px; font-size: 13px; }
+        }
+
         /* 記憶遊戲樣式 */
         .memory-grid {
             display: grid;
@@ -2087,7 +2108,7 @@
                 { name: 'ghost', icon: '👻', score: 1, color: '#66e3ff', speedMin: 0.04, speedMax: 0.07 },
                 { name: 'bat',   icon: '🦇', score: 2, color: '#ffd54f', speedMin: 0.05, speedMax: 0.08 },
                 { name: 'ogre',  icon: '👹', score: 3, color: '#ff5252', speedMin: 0.03, speedMax: 0.05 },
-                { name: 'skull', icon: '💀', score: -1, color: '#ff1744', speedMin: 0.06, speedMax: 0.10 }
+                { name: 'bomb',  icon: '💣', score: -1, color: '#ff6f00', speedMin: 0.06, speedMax: 0.10 }
             ],
             enemyWeights: [0.5, 0.25, 0.15, 0.10],
             maxEnemies: 14,
@@ -2121,6 +2142,8 @@
                 this.enemyTimer = 0;
                 const scoreEl = document.getElementById('shooterScore');
                 if (scoreEl) scoreEl.textContent = '0';
+                const scoreTop = document.getElementById('shooterScoreTop');
+                if (scoreTop) scoreTop.textContent = '0';
             },
 
             initUI() {
@@ -2141,9 +2164,15 @@
                     <div class="legend-row"><span class="icon" style="color:#66e3ff;">👻</span><span class="text">+1 分</span></div>
                     <div class="legend-row"><span class="icon" style="color:#ffd54f;">🦇</span><span class="text">+2 分（需射 2 次）</span></div>
                     <div class="legend-row"><span class="icon" style="color:#ff5252;">👹</span><span class="text">+3 分（需射 3 次）</span></div>
-                    <div class="legend-row"><span class="icon" style="color:#ff1744;">💀</span><span class="text">-1 分</span></div>
+                    <div class="legend-row"><span class="icon" style="color:#ff6f00;">💣</span><span class="text">-1 分（炸彈！）</span></div>
                 `;
                 c.appendChild(legend);
+                // 新增畫面頂部的分數顯示
+                const scoreHud = document.createElement('div');
+                scoreHud.id = 'shooterScoreHud';
+                scoreHud.className = 'shooter-score';
+                scoreHud.innerHTML = `得分：<span id="shooterScoreTop">0</span>`;
+                c.appendChild(scoreHud);
                 // Touch/mouse move support
                 const moveTo = (clientX, clientY) => {
                     const rect = c.getBoundingClientRect();
@@ -2236,7 +2265,7 @@
                 }
             },
 
-            explosion(x, y, color = '#ffd700') {
+            explosion(x, y, color = '#ffd700', scale = 1.6) {
                 const c = document.getElementById('shooterContainer');
                 if (!c) return;
                 const el = document.createElement('div');
@@ -2246,10 +2275,10 @@
                 el.style.borderColor = color;
                 c.appendChild(el);
                 requestAnimationFrame(() => {
-                    el.style.transform = 'translate(-50%, -50%) scale(1.6)';
+                    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
                     el.style.opacity = '0';
                 });
-                setTimeout(() => el.remove(), 280);
+                setTimeout(() => el.remove(), 320);
             },
 
             clearEntities() {
@@ -2311,7 +2340,12 @@
                             if (e.hp <= 0) {
                                 const delta = (typeof e.score === 'number') ? e.score : 1;
                                 const positive = delta > 0;
-                                this.explosion(e.x, e.y, positive ? '#ffd700' : '#ff1744');
+                                if (positive) {
+                                    this.explosion(e.x, e.y, '#ffd700', 1.6);
+                                } else {
+                                    // 炸彈被射中：更大更亮的爆炸特效
+                                    this.explosion(e.x, e.y, '#ff6f00', 2.2);
+                                }
                                 e.el && e.el.remove();
                                 this.enemies.splice(ei, 1);
                                 if (positive) {
@@ -2323,6 +2357,8 @@
                                 }
                                 const se = document.getElementById('shooterScore');
                                 if (se) se.textContent = String(this.score);
+                                const st = document.getElementById('shooterScoreTop');
+                                if (st) st.textContent = String(this.score);
                             }
                             break;
                         }
