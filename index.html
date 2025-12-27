@@ -1109,6 +1109,13 @@
             <button class="reset-btn" onclick="UIManager.confirmReset()">🗑️ 清除所有星星記錄</button>
         </div>
 
+        <!-- 直接進入通關後小遊戲（移至頁面最下方） -->
+        <div id="directBonusSection" style="margin: 20px 0 10px; text-align: center;">
+            <button onclick="SecureBonus.promptAndStart()" style="background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: white; border: none; padding: 12px 18px; border-radius: 12px; font-size: 1.05em; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;">
+                管理者設定
+            </button>
+        </div>
+
         <!-- 難度選擇彈窗 -->
         <div id="difficultyModal" class="modal">
             <div class="modal-content">
@@ -1123,6 +1130,34 @@
                     <button class="difficulty-btn close-modal" onclick="UIManager.closeModal()">
                         取消
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理者遊戲入口彈窗 -->
+        <div id="adminGameModal" class="modal">
+            <div class="modal-content">
+                <h2>管理者設定</h2>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" style="background: linear-gradient(135deg,#ffd700,#ff8c00); color:#fff;" onclick="UIManager.closeAdminModal(); BonusGame.start(true)">🌟 通關後小遊戲</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); Match3Game.start(true)">🍓 森林消消樂</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
+                    <button class="difficulty-btn close-modal" onclick="UIManager.closeAdminModal()">關閉</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理者密碼彈窗（隱藏輸入文字） -->
+        <div id="adminPasswordModal" class="modal" aria-hidden="true">
+            <div class="modal-content">
+                <h2>輸入密碼</h2>
+                <div style="margin: 10px 0 15px;">
+                    <input id="adminPasswordInput" type="password" placeholder="請輸入密碼" style="width: 100%; padding: 12px 14px; font-size: 1em; border-radius: 10px; border: 1px solid #ccc; outline: none;">
+                </div>
+                <div id="adminPasswordError" style="display:none; color:#b00020; font-size:0.95em; margin-bottom:10px;">密碼錯誤，請再試一次！</div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" onclick="SecureBonus.submitPassword()">確認</button>
+                    <button class="difficulty-btn close-modal" onclick="SecureBonus.closeModal()">取消</button>
                 </div>
             </div>
         </div>
@@ -1224,8 +1259,8 @@
             animationId: null,
             spawnTimer: null,
 
-            start() {
-                const unlocked = UIManager.hasThreeStars();
+            start(bypassUnlock = false) {
+                const unlocked = bypassUnlock || UIManager.hasThreeStars();
                 if (!unlocked) {
                     alert(`🌟 在任一關卡獲得 3 顆星星即可解鎖獎勵遊戲喔！繼續加油！`);
                     return;
@@ -1489,6 +1524,61 @@
             }
         };
 
+        // 管理者密碼驗證（改為自訂彈窗，輸入內容隱藏）
+        const SecureBonus = {
+            promptAndStart() {
+                // 開啟自訂密碼彈窗
+                const modal = document.getElementById('adminPasswordModal');
+                const input = document.getElementById('adminPasswordInput');
+                const error = document.getElementById('adminPasswordError');
+                if (error) error.style.display = 'none';
+                if (input) {
+                    input.value = '';
+                    modal.classList.add('active');
+                    setTimeout(() => input.focus(), 50);
+                    input.onkeydown = (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.submitPassword();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.closeModal();
+                        }
+                    };
+                }
+            },
+            getTodayPassword() {
+                const today = new Date();
+                const yyyy = String(today.getFullYear());
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                return `${yyyy}${mm}${dd}`;
+            },
+            submitPassword() {
+                try {
+                    const input = document.getElementById('adminPasswordInput');
+                    const error = document.getElementById('adminPasswordError');
+                    const value = (input.value || '').trim();
+                    const password = this.getTodayPassword();
+                    if (value === password) {
+                        this.closeModal();
+                        UIManager.openAdminModal();
+                    } else {
+                        if (error) error.style.display = 'block';
+                        input.focus();
+                        input.select && input.select();
+                    }
+                } catch (e) {
+                    console.error('Password submit error:', e);
+                    alert('出現問題，請稍後再試。');
+                }
+            },
+            closeModal() {
+                const modal = document.getElementById('adminPasswordModal');
+                if (modal) modal.classList.remove('active');
+            }
+        };
+
         // 消消樂遊戲邏輯
         const Match3Game = {
             gridSize: 8,
@@ -1498,25 +1588,30 @@
             selectedTile: null,
             isProcessing: false,
 
-            start() {
-                const available = UIManager.getAvailableStars();
-                if (available < 3) {
-                    alert(`🌟 需要 3 顆可用星星才能玩「森林消消樂」喔！\n趕快去挑戰關卡賺取星星吧！`);
-                    return;
+            start(bypass = false) {
+                if (!bypass) {
+                    const available = UIManager.getAvailableStars();
+                    if (available < 3) {
+                        alert(`🌟 需要 3 顆可用星星才能玩「森林消消樂」喔！\n趕快去挑戰關卡賺取星星吧！`);
+                        return;
+                    }
+
+                    if (!confirm(`確定要花費 3 顆星星開始「森林消消樂」嗎？`)) {
+                        return;
+                    }
+                    if (!Storage.consumeStarsSequentially(3)) {
+                        return;
+                    }
+                    UIManager.renderLevelMap();
                 }
 
-                if (confirm(`確定要花費 3 顆星星開始「森林消消樂」嗎？`)) {
-                    if (Storage.consumeStarsSequentially(3)) {
-                        this.score = 0;
-                        this.isProcessing = false;
-                        this.selectedTile = null;
-                        UIManager.showScreen('match3');
-                        this.initGrid();
-                        this.renderGrid();
-                        document.getElementById('match3Score').textContent = '0';
-                        UIManager.renderLevelMap(); 
-                    }
-                }
+                this.score = 0;
+                this.isProcessing = false;
+                this.selectedTile = null;
+                UIManager.showScreen('match3');
+                this.initGrid();
+                this.renderGrid();
+                document.getElementById('match3Score').textContent = '0';
             },
 
             stop() {
@@ -1698,20 +1793,23 @@
             matchedPairs: 0,
             isProcessing: false,
 
-            start() {
-                const available = UIManager.getAvailableStars();
-                if (available < 3) {
-                    alert(`🌟 需要 3 顆可用星星才能玩「森林記憶王」喔！\n趕快去挑戰關卡賺取星星吧！`);
-                    return;
-                }
-
-                if (confirm(`確定要花費 3 顆星星開始「森林記憶王」嗎？`)) {
-                    if (Storage.consumeStarsSequentially(3)) {
-                        this.initGame();
-                        UIManager.showScreen('memory');
-                        UIManager.renderLevelMap(); 
+            start(bypass = false) {
+                if (!bypass) {
+                    const available = UIManager.getAvailableStars();
+                    if (available < 3) {
+                        alert(`🌟 需要 3 顆可用星星才能玩「森林記憶王」喔！\n趕快去挑戰關卡賺取星星吧！`);
+                        return;
                     }
+                    if (!confirm(`確定要花費 3 顆星星開始「森林記憶王」嗎？`)) {
+                        return;
+                    }
+                    if (!Storage.consumeStarsSequentially(3)) {
+                        return;
+                    }
+                    UIManager.renderLevelMap();
                 }
+                this.initGame();
+                UIManager.showScreen('memory');
             },
 
             stop() {
@@ -2878,12 +2976,23 @@
                 document.getElementById('difficultyModal').classList.remove('active');
             },
 
+            openAdminModal() {
+                const modal = document.getElementById('adminGameModal');
+                if (modal) modal.classList.add('active');
+            },
+
+            closeAdminModal() {
+                const modal = document.getElementById('adminGameModal');
+                if (modal) modal.classList.remove('active');
+            },
+
             showScreen(screen) {
                 const map = document.getElementById('levelMap');
                 const practice = document.querySelector('.practice-section');
                 const miniGame = document.querySelector('.mini-game-section');
                 const reset = document.getElementById('resetSection');
                 const title = document.querySelector('.game-title');
+                const directBonus = document.getElementById('directBonusSection');
                 
                 const screens = {
                     'game': document.getElementById('gameScreen'),
@@ -2894,7 +3003,7 @@
                 };
 
                 // 隱藏地圖相關
-                [map, practice, miniGame, reset, title].forEach(el => {
+                [map, practice, miniGame, reset, title, directBonus].forEach(el => {
                     if (el) el.style.display = 'none';
                 });
 
@@ -2912,6 +3021,7 @@
                     if (miniGame) miniGame.style.display = 'block';
                     if (reset) reset.style.display = 'block';
                     title.style.display = 'block';
+                    if (directBonus) directBonus.style.display = 'block';
                     this.renderLevelMap();
                 } else if (screens[screen]) {
                     screens[screen].style.display = 'block';
