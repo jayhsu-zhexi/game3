@@ -1118,6 +1118,93 @@
             .memory-card { aspect-ratio: 4 / 3; }
         }
 
+        /* 森林切切樂 遊戲樣式 */
+        .fruit-container {
+            position: relative;
+            width: 100%;
+            height: min(62vh, 520px);
+            background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.15));
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.25);
+            touch-action: none; /* 讓觸控可自由畫線 */
+            user-select: none;
+        }
+        .fruit {
+            position: absolute;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 8px 14px rgba(0,0,0,0.38));
+            transition: transform 0.15s ease;
+            will-change: transform, opacity;
+        }
+        .fruit.sliced {
+            opacity: 0.6;
+            transform: translate(-50%, -50%) scale(0.85) rotate(10deg);
+        }
+        .slice-trail {
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.3) 60%, rgba(255,255,255,0) 70%);
+            pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));
+            animation: fadeTrail 0.45s ease-out forwards;
+        }
+        @keyframes fadeTrail {
+            0% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+        }
+        /* 切水果：切開動畫用的左右半邊與果汁濺射 */
+        .fruit-piece {
+            position: absolute;
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            filter: drop-shadow(0 8px 14px rgba(0,0,0,0.38));
+            will-change: transform, opacity;
+        }
+        .fruit-piece.left { clip-path: inset(0 50% 0 0); }
+        .fruit-piece.right { clip-path: inset(0 0 0 50%); }
+        .fruit-piece.left { animation: flyLeft 550ms ease-out forwards; }
+        .fruit-piece.right { animation: flyRight 550ms ease-out forwards; }
+        @keyframes flyLeft {
+            0% { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); }
+            60% { opacity: 1; transform: translate(calc(-50% - 30px), calc(-50% - 10px)) rotate(-18deg); }
+            100% { opacity: 0; transform: translate(calc(-50% - 60px), calc(-50% + 40px)) rotate(-38deg); }
+        }
+        @keyframes flyRight {
+            0% { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); }
+            60% { opacity: 1; transform: translate(calc(-50% + 30px), calc(-50% - 10px)) rotate(18deg); }
+            100% { opacity: 0; transform: translate(calc(-50% + 60px), calc(-50% + 40px)) rotate(38deg); }
+        }
+        .fruit-juice {
+            position: absolute;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            pointer-events: none;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,80,80,0.8) 40%, rgba(255,0,0,0.0) 70%);
+            filter: blur(0.5px) drop-shadow(0 0 10px rgba(255,80,80,0.6));
+            transform: translate(-50%, -50%) scale(1);
+            animation: juicePop 600ms ease-out forwards;
+        }
+        @keyframes juicePop {
+            0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.6); }
+            60% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.6); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+        }
+
         /* 平板直向：確保24張卡片能在單一畫面顯示（4欄 x 6列）*/
         @media (orientation: portrait) and (min-width: 768px) and (max-width: 1199px) {
             #memoryScreen { overflow: hidden; }
@@ -1192,6 +1279,18 @@
                         <small>記憶訓練 • 24–36張卡片</small>
                     </div>
                 </div>
+                <div class="practice-card" onclick="FruitGame.start()" style="position: relative;">
+                    <div style="position: absolute; top: 10px; right: 10px; background: #ff4d4d; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        一次 3 ⭐
+                    </div>
+                    <div class="practice-icon">🍉</div>
+                    <h3>森林切切樂</h3>
+                    <div class="practice-description">
+                        反應力挑戰！<br>
+                        ✂️ 用手指或滑鼠劃過水果來切開得分！<br>
+                        <small>動作休閒 • 目標 100 分</small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1238,6 +1337,7 @@
                 <div class="difficulty-buttons" style="margin-bottom:14px;">
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); Match3Game.start(true)">🍓 森林消消樂</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); FruitGame.start(true)">🍉 森林切切樂</button>
                 </div>
                 <div class="difficulty-buttons">
                     <button class="difficulty-btn close-modal" onclick="UIManager.closeAdminModal()">關閉</button>
@@ -1371,6 +1471,21 @@
                 <!-- 卡片將由 JS 動態生成 -->
             </div>
             <p style="text-align: center; margin-top: 10px; color: #666;">找出兩兩成對的卡片吧！</p>
+        </div>
+
+        <!-- 森林切切樂遊戲畫面 -->
+        <div id="fruitScreen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">森林切切樂</div>
+                    <div class="info-item">得分: <span id="fruitScore">0</span></div>
+                </div>
+                <button class="back-btn" onclick="FruitGame.stop()">返回地圖</button>
+            </div>
+            <div id="fruitContainer" class="fruit-container">
+                <!-- 水果與滑軌由 JS 動態生成 -->
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666;">用手指或滑鼠快速劃過水果來切開它們！累積 100 分過關。</p>
         </div>
     </div>
 
@@ -2379,6 +2494,282 @@
             }
         };
 
+        // 森林切切樂 小遊戲
+        const FruitGame = {
+            active: false,
+            score: 0,
+            fruits: [],
+            rafId: 0,
+            spawnTimer: 0,
+            sliceActive: false,
+            lastPoint: null,
+            containerRect: null,
+            emojis: ['🍎','🍌','🍊','🍉','🍇','🍓','🍍','🥝'],
+
+            start(bypass = false) {
+                if (!bypass) {
+                    const available = UIManager.getAvailableStars();
+                    if (available < 3) {
+                        alert(`🌟 需要 3 顆可用星星才能玩「森林切切樂」喔！\n趕快去挑戰關卡賺取星星吧！`);
+                        return;
+                    }
+                    if (!confirm(`確定要花費 3 顆星星開始「森林切切樂」嗎？`)) {
+                        return;
+                    }
+                    if (!Storage.consumeStarsSequentially(3)) {
+                        return;
+                    }
+                    UIManager.renderLevelMap();
+                }
+                this.reset();
+                UIManager.showScreen('fruit');
+                this.bindEvents();
+                this.loop();
+                this.scheduleSpawn();
+            },
+
+            stop() {
+                this.active = false;
+                cancelAnimationFrame(this.rafId);
+                clearTimeout(this.spawnTimer);
+                const c = document.getElementById('fruitContainer');
+                if (c) c.innerHTML = '';
+                UIManager.showScreen('map');
+            },
+
+            reset() {
+                this.active = true;
+                this.score = 0;
+                this.fruits = [];
+                this.sliceActive = false;
+                this.lastPoint = null;
+                const sc = document.getElementById('fruitScore');
+                if (sc) sc.textContent = '0';
+                const c = document.getElementById('fruitContainer');
+                if (c) {
+                    c.innerHTML = '';
+                    this.containerRect = c.getBoundingClientRect();
+                }
+            },
+
+            bindEvents() {
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                const onDown = (e) => {
+                    this.sliceActive = true;
+                    const p = this.eventPoint(e);
+                    this.lastPoint = p;
+                    this.spawnTrail(p.x, p.y);
+                };
+                const onMove = (e) => {
+                    if (!this.sliceActive) return;
+                    const p = this.eventPoint(e);
+                    this.spawnTrail(p.x, p.y);
+                    this.checkSlice(this.lastPoint, p);
+                    this.lastPoint = p;
+                };
+                const onUp = () => { this.sliceActive = false; this.lastPoint = null; };
+                c.onpointerdown = onDown;
+                c.onpointermove = onMove;
+                c.onpointerup = onUp;
+                c.onpointerleave = onUp;
+                c.onpointercancel = onUp;
+            },
+
+            eventPoint(e) {
+                const c = document.getElementById('fruitContainer');
+                if (!c) return {x:0,y:0};
+                const rect = c.getBoundingClientRect();
+                const cx = (e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX));
+                const cy = (e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY));
+                return { x: cx - rect.left, y: cy - rect.top };
+            },
+
+            spawnTrail(x, y) {
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                const dot = document.createElement('div');
+                dot.className = 'slice-trail';
+                dot.style.left = x + 'px';
+                dot.style.top = y + 'px';
+                c.appendChild(dot);
+                setTimeout(() => dot.remove(), 500);
+            },
+
+            scheduleSpawn() {
+                const interval = 1100 + Math.random() * 700; // 1.1s ~ 1.8s（更慢）
+                this.spawnTimer = setTimeout(() => {
+                    if (!this.active) return;
+                    this.spawnFruit();
+                    this.scheduleSpawn();
+                }, interval);
+            },
+
+            spawnFruit() {
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                const w = c.clientWidth;
+                const h = c.clientHeight;
+
+                // 隨機決定出現方向：上方、左側、右側
+                // 預設仍以上方為主，左右兩側各給一定機率
+                const r = Math.random();
+                let x, y, vx, vy, ax, g;
+
+                if (r < 0.6) {
+                    // 上方生成：維持原本拋物線下落
+                    x = 50 + Math.random() * (w - 100); // 稍微避開左右邊緣
+                    y = -24; // 從上方外部進入
+                    vx = (Math.random() * 2 - 1) * 1.0; // 左右位移稍減，整體更慢
+                    vy = 0.7 + Math.random() * 0.9; // 更慢的初速
+                    ax = (Math.random() * 2 - 1) * 0.012; // 水平加速度稍降，仍保有拋物線
+                    // 重力（只給上方生成者，讓其落下）
+                    g = 0.055 + Math.random() * 0.035;
+                } else if (r < 0.8) {
+                    // 從左側進場：直線飛向右側（不下落）
+                    x = -24; // 從左邊界外
+                    y = 20 + Math.random() * (h * 0.6);
+                    vx = 3.2 + Math.random() * 1.8; // 往右的速度
+                    vy = 0;                     // 不下落
+                    ax = undefined;             // 不施加水平加速度，也避免速度夾限
+                    g = 0;                      // 無重力
+                } else {
+                    // 從右側進場：直線飛向左側（不下落）
+                    x = w + 24; // 從右邊界外
+                    y = 20 + Math.random() * (h * 0.6);
+                    vx = -(3.2 + Math.random() * 1.8); // 往左的速度
+                    vy = 0;                     // 不下落
+                    ax = undefined;             // 不施加水平加速度，也避免速度夾限
+                    g = 0;                      // 無重力
+                }
+
+                const emoji = this.emojis[Math.floor(Math.random() * this.emojis.length)];
+                const el = document.createElement('div');
+                el.className = 'fruit';
+                el.textContent = emoji;
+                c.appendChild(el);
+                const fruit = { x, y, vx, vy, g, ax, el, sliced: false, value: 5, emoji };
+                this.fruits.push(fruit);
+            },
+
+            checkSlice(p1, p2) {
+                if (!p1 || !p2) return;
+                // 線段與圓距離簡化：用終點附近判斷即可
+                this.fruits.forEach(f => {
+                    if (f.sliced) return;
+                    const dx = p2.x - f.x;
+                    const dy = p2.y - f.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 52) { // 命中判定稍微放大，符合更大的水果
+                        this.sliceFruit(f);
+                    }
+                });
+            },
+
+            sliceFruit(fruit) {
+                // 標記為已切，避免重複判定與扣分
+                fruit.sliced = true;
+                // 製作切開動畫效果（左右半邊 + 果汁）
+                this.createSliceEffect(fruit.x, fruit.y, fruit.emoji);
+                // 立即移除原本水果 DOM 與資料
+                if (fruit.el && fruit.el.parentNode) fruit.el.remove();
+                const idx = this.fruits.indexOf(fruit);
+                if (idx >= 0) this.fruits.splice(idx, 1);
+                // 加分與音效
+                this.score += fruit.value;
+                const sc = document.getElementById('fruitScore');
+                if (sc) sc.textContent = String(this.score);
+                AudioSystem.playCorrect();
+                // 勝利條件
+                if (this.score >= 100) {
+                    this.showWin();
+                }
+            },
+
+            createSliceEffect(x, y, emoji) {
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                // 兩半
+                const left = document.createElement('div');
+                left.className = 'fruit-piece left';
+                left.style.left = x + 'px';
+                left.style.top = y + 'px';
+                left.textContent = emoji;
+                const right = document.createElement('div');
+                right.className = 'fruit-piece right';
+                right.style.left = x + 'px';
+                right.style.top = y + 'px';
+                right.textContent = emoji;
+                c.appendChild(left);
+                c.appendChild(right);
+                // 果汁濺射（幾個泡泡）
+                const splashCount = 5 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < splashCount; i++) {
+                    const j = document.createElement('div');
+                    j.className = 'fruit-juice';
+                    const ox = (Math.random() * 80) - 40;
+                    const oy = (Math.random() * 40) - 20;
+                    j.style.left = (x + ox) + 'px';
+                    j.style.top = (y + oy) + 'px';
+                    c.appendChild(j);
+                    setTimeout(() => j.remove(), 650);
+                }
+                // 清理半邊
+                setTimeout(() => { left.remove(); right.remove(); }, 600);
+            },
+
+            loop() {
+                if (!this.active) return;
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                const h = c.clientHeight;
+                const w = c.clientWidth;
+                // 更新
+                for (let i = this.fruits.length - 1; i >= 0; i--) {
+                    const f = this.fruits[i];
+                    // 物理更新：加入水平加速度，形成弧線軌跡
+                    if (typeof f.ax === 'number') {
+                        f.vx += f.ax;
+                        // 夾限避免水平速度過大
+                        if (f.vx > 2.2) f.vx = 2.2;
+                        if (f.vx < -2.2) f.vx = -2.2;
+                    }
+                    f.vy += f.g;
+                    f.x += f.vx;
+                    f.y += f.vy;
+                    // 邊界移除（配合更大的水果，放寬邊界緩衝）
+                    if (f.y > h + 80 || f.y < -80 || f.x < -80 || f.x > w + 80) {
+                        // 掉落不扣分：直接移除未切中的水果
+                        if (f.el) f.el.remove();
+                        this.fruits.splice(i,1);
+                        continue;
+                    }
+                    // 繪製
+                    f.el.style.left = f.x + 'px';
+                    f.el.style.top = f.y + 'px';
+                }
+                this.rafId = requestAnimationFrame(() => this.loop());
+            },
+
+            showWin() {
+                this.active = false;
+                cancelAnimationFrame(this.rafId);
+                clearTimeout(this.spawnTimer);
+                const c = document.getElementById('fruitContainer');
+                if (!c) return;
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;';
+                overlay.innerHTML = '<h2 style="color:#ffd700;margin:8px 0;">🎉 恭喜過關！</h2><p style="margin:6px 0;">刀法了得！你是切水果高手！</p>';
+                const btn = document.createElement('button');
+                btn.className = 'result-btn home-btn';
+                btn.textContent = '返回地圖';
+                btn.onclick = () => { this.stop(); };
+                overlay.appendChild(btn);
+                c.appendChild(overlay);
+                AudioSystem.playComplete();
+            }
+        };
+        
         const STORY_MAZE_HARD_QUESTIONS = [
             { q: "小光有38塊積木，小華給他16塊後，小光又借給同學15塊，小光現在有幾塊積木？", options: ["39塊", "37塊", "22塊", "7塊"], answer: "39塊" },
             { q: "小傑家裡有24本故事書，爸爸又買了18本，爺爺也送來15本，現在小傑家一共有幾本故事書？", options: ["57本", "49本", "42本", "62本"], answer: "57本" },
@@ -3441,7 +3832,8 @@
                     'bonus': document.getElementById('bonusScreen'),
                     'match3': document.getElementById('match3Screen'),
                     'memory': document.getElementById('memoryScreen'),
-                    'shooter': document.getElementById('shooterScreen')
+                    'shooter': document.getElementById('shooterScreen'),
+                    'fruit': document.getElementById('fruitScreen')
                 };
 
                 // 隱藏地圖相關
