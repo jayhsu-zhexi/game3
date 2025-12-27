@@ -934,6 +934,97 @@
             transition: top 0.3s cubic-bezier(0.55, 0.055, 0.675, 0.19);
         }
 
+        /* 射擊遊戲樣式 */
+        .shooter-container {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            background: linear-gradient(to bottom, #00111a, #00334d);
+            border: 4px solid #0a3d62;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.6);
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .shooter-hud {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+        .shooter-player, .shooter-bullet, .shooter-enemy, .shooter-explosion {
+            position: absolute;
+            user-select: none;
+            pointer-events: none;
+        }
+        .shooter-player {
+            width: 64px;
+            height: 64px;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.4));
+            font-size: 56px;
+            line-height: 1;
+        }
+        .shooter-bullet {
+            width: 8px;
+            height: 20px;
+            background: #ffeb3b;
+            border-radius: 4px;
+            box-shadow: 0 0 12px #ffeb3b;
+        }
+        .shooter-enemy {
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 0 8px rgba(255,0,0,0.5));
+            font-size: 52px;
+            line-height: 1;
+        }
+        .shooter-explosion {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #ffd700;
+            border-radius: 50%;
+            opacity: 0.9;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+        }
+        /* 3 分怪（👹）特效：發光與脈動放大 */
+        @keyframes ogrePulse {
+            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 12px #ff5252, 0 0 24px rgba(255,82,82,0.5); }
+            50% { transform: translate(-50%, -50%) scale(1.12); box-shadow: 0 0 18px #ff5252, 0 0 36px rgba(255,82,82,0.7); }
+            100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 12px #ff5252, 0 0 24px rgba(255,82,82,0.5); }
+        }
+        .ogre-boss {
+            animation: ogrePulse 1.2s ease-in-out infinite;
+            /* 額外高亮：在原本的 drop-shadow 之外再加上盒影暈光 */
+            box-shadow: 0 0 14px #ff5252, 0 0 26px rgba(255,82,82,0.6);
+        }
+        /* 射擊遊戲：分數圖示說明（右上角） */
+        .shooter-legend {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            padding: 6px 8px;
+            font-size: 14px;
+            line-height: 1.2;
+            backdrop-filter: blur(2px);
+            pointer-events: none; /* 不阻擋射擊/拖曳 */
+            z-index: 6;
+        }
+        .shooter-legend .legend-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; white-space: nowrap; }
+        .shooter-legend .icon { width: 22px; text-align: center; font-size: 18px; line-height: 1; filter: drop-shadow(0 0 6px currentColor); }
+        .shooter-legend .text { font-weight: 700; text-shadow: 0 2px 3px rgba(0,0,0,0.4); }
+        @media (max-width: 480px) { .shooter-legend { font-size: 12px; padding: 5px 6px; } .shooter-legend .icon { font-size: 16px; width: 18px; } }
+
         /* 記憶遊戲樣式 */
         .memory-grid {
             display: grid;
@@ -1142,7 +1233,20 @@
                     <button class="difficulty-btn" style="background: linear-gradient(135deg,#ffd700,#ff8c00); color:#fff;" onclick="UIManager.closeAdminModal(); BonusGame.start(true)">🌟 通關後小遊戲</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); Match3Game.start(true)">🍓 森林消消樂</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); ShootingGame.start(true)">🎯 森林射擊戰</button>
                     <button class="difficulty-btn close-modal" onclick="UIManager.closeAdminModal()">關閉</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通關後小遊戲選擇彈窗（結果畫面 3 星時開啟） -->
+        <div id="resultBonusModal" class="modal">
+            <div class="modal-content">
+                <h2>選擇通關後小遊戲</h2>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" style="background: linear-gradient(135deg,#ffd700,#ff8c00); color:#fff;" onclick="UIManager.closeResultBonusModal(); BonusGame.start(true)">🌟 星星收集大作戰</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeResultBonusModal(); ShootingGame.start()">🎯 森林射擊戰</button>
+                    <button class="difficulty-btn close-modal" onclick="UIManager.closeResultBonusModal()">關閉</button>
                 </div>
             </div>
         </div>
@@ -1197,7 +1301,7 @@
             <div id="resultStars" class="result-stars"></div>
             <div id="resultMessage" class="result-message"></div>
             <div class="result-buttons">
-                <button id="bonusBtn" class="result-btn" style="display: none; background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: white; width: 100%; margin-bottom: 10px;" onclick="BonusGame.start()">🌟 進入小遊戲獎勵 🌟</button>
+                <button id="bonusBtn" class="result-btn" style="display: none; background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: white; width: 100%; margin-bottom: 10px;" onclick="UIManager.openResultBonusModal()">🌟 進入小遊戲獎勵 🌟</button>
                 <button class="result-btn retry-btn" onclick="GameEngine.retryLevel()">再玩一次</button>
                 <button class="result-btn home-btn" onclick="GameEngine.backToMap()">返回地圖</button>
             </div>
@@ -1231,6 +1335,21 @@
                 <!-- 網格將由 JS 動態生成 -->
             </div>
             <p style="text-align: center; margin-top: 10px; color: #666;">點擊兩個相鄰的水果來交換位置！</p>
+        </div>
+
+        <!-- 射擊遊戲畫面 -->
+        <div id="shooterScreen" class="game-screen">
+            <div class="game-header">
+                <div class="game-info">
+                    <div class="info-item">森林射擊戰</div>
+                    <div class="info-item">得分: <span id="shooterScore">0</span></div>
+                </div>
+                <button class="back-btn" onclick="ShootingGame.stop()">返回地圖</button>
+            </div>
+            <div id="shooterContainer" class="shooter-container">
+                <div class="shooter-hud">W/A/S/D 或拖曳移動，點擊/空白鍵射擊</div>
+            </div>
+            <p style="text-align:center; margin-top:10px; color:#666;">消滅森林中的搗蛋幽靈吧！</p>
         </div>
 
         <!-- 記憶遊戲畫面 -->
@@ -1786,6 +1905,293 @@
         };
 
         // 記憶遊戲邏輯
+        const ShootingGame = {
+            score: 0,
+            active: false,
+            player: { x: 50, y: 85, speed: 0.6 }, // percent positions
+            bullets: [], // {x,y,vy,el}
+            enemies: [], // {x,y,vy,el,hp,score}
+            lastTime: 0,
+            fireCooldown: 0,
+            enemyTimer: 0,
+            keyState: {},
+            rafId: null,
+            bypass: true,
+            // 不同分值的怪物：1/2/3 分與扣 1 分
+            enemyTypes: [
+                { name: 'ghost', icon: '👻', score: 1, color: '#66e3ff', speedMin: 0.04, speedMax: 0.07 },
+                { name: 'bat',   icon: '🦇', score: 2, color: '#ffd54f', speedMin: 0.05, speedMax: 0.08 },
+                { name: 'ogre',  icon: '👹', score: 3, color: '#ff5252', speedMin: 0.035, speedMax: 0.06 },
+                { name: 'skull', icon: '💀', score: -1, color: '#ff1744', speedMin: 0.06, speedMax: 0.10 }
+            ],
+            enemyWeights: [0.5, 0.25, 0.15, 0.10],
+            maxEnemies: 14,
+
+            start(bypass = false) {
+                this.bypass = bypass;
+                // No star cost; admin access only for now
+                this.reset();
+                UIManager.showScreen('shooter');
+                this.initUI();
+                this.bindControls();
+                this.active = true;
+                this.lastTime = performance.now();
+                this.rafId = requestAnimationFrame((t) => this.loop(t));
+            },
+
+            stop() {
+                this.active = false;
+                cancelAnimationFrame(this.rafId);
+                this.unbindControls();
+                this.clearEntities();
+                UIManager.showScreen('map');
+            },
+
+            reset() {
+                this.score = 0;
+                this.player = { x: 50, y: 85, speed: 0.6 };
+                this.bullets = [];
+                this.enemies = [];
+                this.fireCooldown = 0;
+                this.enemyTimer = 0;
+                const scoreEl = document.getElementById('shooterScore');
+                if (scoreEl) scoreEl.textContent = '0';
+            },
+
+            initUI() {
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                c.innerHTML = '';
+                // player element
+                const p = document.createElement('div');
+                p.id = 'shooterPlayer';
+                p.className = 'shooter-player';
+                p.textContent = '🏹';
+                c.appendChild(p);
+                this.updatePlayerEl();
+                // 分數圖示說明（右上角）
+                const legend = document.createElement('div');
+                legend.className = 'shooter-legend';
+                legend.innerHTML = `
+                    <div class="legend-row"><span class="icon" style="color:#66e3ff;">👻</span><span class="text">+1 分</span></div>
+                    <div class="legend-row"><span class="icon" style="color:#ffd54f;">🦇</span><span class="text">+2 分（需射 2 次）</span></div>
+                    <div class="legend-row"><span class="icon" style="color:#ff5252;">👹</span><span class="text">+3 分（需射 3 次）</span></div>
+                    <div class="legend-row"><span class="icon" style="color:#ff1744;">💀</span><span class="text">-1 分</span></div>
+                `;
+                c.appendChild(legend);
+                // Touch/mouse move support
+                const moveTo = (clientX, clientY) => {
+                    const rect = c.getBoundingClientRect();
+                    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+                    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+                    this.player.x = x;
+                    this.player.y = y;
+                    this.updatePlayerEl();
+                };
+                c.onpointerdown = (e) => { moveTo(e.clientX, e.clientY); this.tryFire(); };
+                c.onpointermove = (e) => { if (e.buttons) moveTo(e.clientX, e.clientY); };
+            },
+
+            bindControls() {
+                this.keyState = {};
+                this._keyDown = (e) => {
+                    this.keyState[e.key.toLowerCase()] = true;
+                    if (e.code === 'Space') { e.preventDefault(); this.tryFire(); }
+                };
+                this._keyUp = (e) => { this.keyState[e.key.toLowerCase()] = false; };
+                window.addEventListener('keydown', this._keyDown);
+                window.addEventListener('keyup', this._keyUp);
+            },
+            unbindControls() {
+                window.removeEventListener('keydown', this._keyDown);
+                window.removeEventListener('keyup', this._keyUp);
+            },
+
+            updatePlayerEl() {
+                const p = document.getElementById('shooterPlayer');
+                if (p) {
+                    p.style.left = this.player.x + '%';
+                    p.style.top = this.player.y + '%';
+                }
+            },
+
+            tryFire() {
+                if (this.fireCooldown > 0 || !this.active) return;
+                this.fireCooldown = 180; // ms
+                this.spawnBullet(this.player.x, this.player.y - 6);
+                AudioSystem.playCorrect();
+            },
+
+            spawnBullet(x, y) {
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                const el = document.createElement('div');
+                el.className = 'shooter-bullet';
+                el.style.left = x + '%';
+                el.style.top = y + '%';
+                c.appendChild(el);
+                this.bullets.push({ x, y, vy: -0.35, el });
+            },
+
+            spawnEnemy() {
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                // 決定這一輪要生幾隻
+                let toSpawn = Math.random() < 0.35 ? 2 : 1;
+                while (toSpawn-- > 0 && this.enemies.length < this.maxEnemies) {
+                    // 依權重選型
+                    const r = Math.random();
+                    let acc = 0;
+                    let type = this.enemyTypes[0];
+                    for (let i = 0; i < this.enemyTypes.length; i++) {
+                        acc += this.enemyWeights[i] || 0;
+                        if (r <= acc) { type = this.enemyTypes[i]; break; }
+                    }
+                    const el = document.createElement('div');
+                    el.className = 'shooter-enemy';
+                    el.textContent = type.icon;
+                    const x = 5 + Math.random() * 90;
+                    const y = -5 - Math.random() * 5;
+                    el.style.left = x + '%';
+                    el.style.top = y + '%';
+                    // 不同類型稍微不同的發光顏色
+                    el.style.filter = `drop-shadow(0 0 10px ${type.color})`;
+                    // 3 分怪（ogre）更大且更亮
+                    if (type.name === 'ogre') {
+                        el.style.width = '72px';
+                        el.style.height = '72px';
+                        el.style.fontSize = '64px';
+                        el.style.filter = `drop-shadow(0 0 14px ${type.color}) saturate(1.2)`;
+                        el.classList.add('ogre-boss');
+                    }
+                    c.appendChild(el);
+                    const speed = type.speedMin + Math.random() * (type.speedMax - type.speedMin);
+                    const hp = type.score > 0 ? type.score : 1; // 2分要射2次，3分要射3次，其餘1次
+                    this.enemies.push({ x, y, vy: speed, el, hp, score: type.score });
+                }
+            },
+
+            explosion(x, y, color = '#ffd700') {
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                const el = document.createElement('div');
+                el.className = 'shooter-explosion';
+                el.style.left = x + '%';
+                el.style.top = y + '%';
+                el.style.borderColor = color;
+                c.appendChild(el);
+                requestAnimationFrame(() => {
+                    el.style.transform = 'translate(-50%, -50%) scale(1.6)';
+                    el.style.opacity = '0';
+                });
+                setTimeout(() => el.remove(), 280);
+            },
+
+            clearEntities() {
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                [...c.querySelectorAll('.shooter-bullet,.shooter-enemy,.shooter-explosion')].forEach(n => n.remove());
+            },
+
+            loop(timestamp) {
+                if (!this.active) return;
+                const dt = Math.min(50, timestamp - this.lastTime);
+                this.lastTime = timestamp;
+                // cooldown timers
+                this.fireCooldown = Math.max(0, this.fireCooldown - dt);
+                this.enemyTimer += dt;
+                if (this.enemyTimer > 550) { this.enemyTimer = 0; this.spawnEnemy(); }
+
+                // keyboard movement
+                const speed = (this.player.speed * dt);
+                if (this.keyState['a'] || this.keyState['arrowleft']) this.player.x -= speed;
+                if (this.keyState['d'] || this.keyState['arrowright']) this.player.x += speed;
+                if (this.keyState['w'] || this.keyState['arrowup']) this.player.y -= speed;
+                if (this.keyState['s'] || this.keyState['arrowdown']) this.player.y += speed;
+                this.player.x = Math.max(5, Math.min(95, this.player.x));
+                this.player.y = Math.max(10, Math.min(95, this.player.y));
+                this.updatePlayerEl();
+
+                // update bullets
+                for (let i = this.bullets.length - 1; i >= 0; i--) {
+                    const b = this.bullets[i];
+                    b.y += b.vy * (dt);
+                    if (b.el) b.el.style.top = b.y + '%';
+                    if (b.y < -5) { b.el && b.el.remove(); this.bullets.splice(i, 1); }
+                }
+                // update enemies
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const e = this.enemies[i];
+                    e.y += e.vy * (dt);
+                    if (e.el) e.el.style.top = e.y + '%';
+                    // check reach bottom -> penalty
+                    if (e.y > 105) {
+                        // 掉落到底部不扣分，直接移除
+                        e.el && e.el.remove();
+                        this.enemies.splice(i, 1);
+                    }
+                }
+                // collisions bullet-enemy
+                for (let bi = this.bullets.length - 1; bi >= 0; bi--) {
+                    const b = this.bullets[bi];
+                    for (let ei = this.enemies.length - 1; ei >= 0; ei--) {
+                        const e = this.enemies[ei];
+                        const dx = (b.x - e.x);
+                        const dy = (b.y - e.y);
+                        if (Math.abs(dx) < 5 && Math.abs(dy) < 8) {
+                            // hit
+                            b.el && b.el.remove();
+                            this.bullets.splice(bi, 1);
+                            e.hp -= 1;
+                            if (e.hp <= 0) {
+                                const delta = (typeof e.score === 'number') ? e.score : 1;
+                                const positive = delta > 0;
+                                this.explosion(e.x, e.y, positive ? '#ffd700' : '#ff1744');
+                                e.el && e.el.remove();
+                                this.enemies.splice(ei, 1);
+                                if (positive) {
+                                    this.score += delta;
+                                    AudioSystem.playCorrect();
+                                } else {
+                                    this.score = Math.max(0, this.score + delta); // delta 為負
+                                    AudioSystem.playWrong();
+                                }
+                                const se = document.getElementById('shooterScore');
+                                if (se) se.textContent = String(this.score);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // simple win condition
+                if (this.score >= 100) {
+                    this.showWin();
+                    return;
+                }
+
+                this.rafId = requestAnimationFrame((t) => this.loop(t));
+            },
+
+            showWin() {
+                this.active = false;
+                cancelAnimationFrame(this.rafId);
+                const c = document.getElementById('shooterContainer');
+                if (!c) return;
+                this.clearEntities();
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;';
+                overlay.innerHTML = '<h2 style="color:#ffd700;margin:8px 0;">🎉 恭喜過關！</h2><p style="margin:6px 0;">你擊敗了森林幽靈！</p>';
+                const btn = document.createElement('button');
+                btn.className = 'result-btn home-btn';
+                btn.textContent = '返回地圖';
+                btn.onclick = () => { this.stop(); };
+                overlay.appendChild(btn);
+                c.appendChild(overlay);
+                AudioSystem.playComplete();
+            }
+        };
+
         const MemoryGame = {
             icons: ['🦊', '🐰', '🦉', '🐻', '🦌', '🐗', '🦝', '🐹', '🐿️', '🐢', '🦋', '🐝'],
             cards: [],
@@ -2986,6 +3392,16 @@
                 if (modal) modal.classList.remove('active');
             },
 
+            openResultBonusModal() {
+                const modal = document.getElementById('resultBonusModal');
+                if (modal) modal.classList.add('active');
+            },
+
+            closeResultBonusModal() {
+                const modal = document.getElementById('resultBonusModal');
+                if (modal) modal.classList.remove('active');
+            },
+
             showScreen(screen) {
                 const map = document.getElementById('levelMap');
                 const practice = document.querySelector('.practice-section');
@@ -2999,7 +3415,8 @@
                     'result': document.getElementById('resultScreen'),
                     'bonus': document.getElementById('bonusScreen'),
                     'match3': document.getElementById('match3Screen'),
-                    'memory': document.getElementById('memoryScreen')
+                    'memory': document.getElementById('memoryScreen'),
+                    'shooter': document.getElementById('shooterScreen')
                 };
 
                 // 隱藏地圖相關
