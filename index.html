@@ -2402,13 +2402,21 @@
             isProcessing: false,
             totalPairs: 12, // 預設為 12 對
 
-            // 判斷是否可使用 18 對：大螢幕且高度也夠
+            // 判斷是否可使用 18 對：大螢幕或 iPad 橫向時改為 36 張（18 對）
+            isIPadDevice() {
+                const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+                const isiPad = /iPad/i.test(ua);
+                const isIpadOS13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+                return isiPad || isIpadOS13Plus;
+            },
             decidePairsCount() {
                 const w = window.innerWidth || 0;
                 const h = window.innerHeight || 0;
                 const isLandscape = w > h;
-                // 寬度、高度門檻可依實測微調
+                // 桌機或大型平板：直接使用 18 對
                 if (isLandscape && w >= 1200 && h >= 700) return 18;
+                // iPad 橫向（含 iPadOS 13+）使用 18 對
+                if (isLandscape && this.isIPadDevice()) return 18;
                 return 12;
             },
 
