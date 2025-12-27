@@ -1189,7 +1189,7 @@
                     <div class="practice-description">
                         腦力大考驗！<br>
                         🔍 找出兩兩成對的森林夥伴吧 🦉<br>
-                        <small>記憶訓練 • 24張卡片</small>
+                        <small>記憶訓練 • 24–36張卡片</small>
                     </div>
                 </div>
             </div>
@@ -1363,7 +1363,7 @@
             <div class="game-header">
                 <div class="game-info">
                     <div class="info-item">森林記憶王</div>
-                    <div class="info-item">配對: <span id="memoryPairs">0</span>/12</div>
+                    <div class="info-item">配對: <span id="memoryPairs">0</span>/<span id="memoryTotalPairs">12</span></div>
                 </div>
                 <button class="back-btn" onclick="MemoryGame.stop()">返回地圖</button>
             </div>
@@ -2199,11 +2199,23 @@
         };
 
         const MemoryGame = {
-            icons: ['🦊', '🐰', '🦉', '🐻', '🦌', '🐗', '🦝', '🐹', '🐿️', '🐢', '🦋', '🐝'],
+            // 支援最多 18 對（36 張卡片）的圖示
+            icons: ['🦊','🐰','🦉','🐻','🦌','🐗','🦝','🐹','🐿️','🐢','🦋','🐝','🐸','🦔','🦨','🦫','🦦','🦡'],
             cards: [],
             flippedCards: [],
             matchedPairs: 0,
             isProcessing: false,
+            totalPairs: 12, // 預設為 12 對
+
+            // 判斷是否可使用 18 對：大螢幕且高度也夠
+            decidePairsCount() {
+                const w = window.innerWidth || 0;
+                const h = window.innerHeight || 0;
+                const isLandscape = w > h;
+                // 寬度、高度門檻可依實測微調
+                if (isLandscape && w >= 1200 && h >= 700) return 18;
+                return 12;
+            },
 
             start(bypass = false) {
                 if (!bypass) {
@@ -2232,16 +2244,23 @@
                 this.matchedPairs = 0;
                 this.flippedCards = [];
                 this.isProcessing = false;
-                
+
+                // 根據螢幕條件決定要用 12 對還是 18 對
+                this.totalPairs = this.decidePairsCount();
+
                 // 清理可能的舊過關畫面
                 const oldOverlay = document.getElementById('memoryWinOverlay');
                 if (oldOverlay) oldOverlay.remove();
 
+                // 更新配對顯示
                 const pairsEl = document.getElementById('memoryPairs');
                 if (pairsEl) pairsEl.textContent = '0';
+                const totalEl = document.getElementById('memoryTotalPairs');
+                if (totalEl) totalEl.textContent = String(this.totalPairs);
                 
-                // 準備 24 張卡片 (12對)
-                const gameIcons = [...this.icons, ...this.icons];
+                // 準備卡片：依 totalPairs 取前 N 個圖示，倍增並洗牌
+                const selected = this.icons.slice(0, this.totalPairs);
+                const gameIcons = [...selected, ...selected];
                 const shuffledIcons = Utils.shuffleArray(gameIcons);
                 
                 this.cards = shuffledIcons.map((icon, index) => ({
@@ -2302,7 +2321,7 @@
                     if (pairsEl) pairsEl.textContent = this.matchedPairs;
                     AudioSystem.playCorrect();
                     
-                    if (this.matchedPairs === 12) {
+                    if (this.matchedPairs === this.totalPairs) {
                         setTimeout(() => this.winGame(), 800);
                     }
                 } else {
