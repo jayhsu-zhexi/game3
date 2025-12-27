@@ -1339,7 +1339,24 @@
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); FruitGame.start(true)">🍉 森林切切樂</button>
                 </div>
+                <div style="margin:10px 0 8px; font-weight:bold; color:#6d4c41;">🌟 星星管理</div>
+                <div style="font-size:0.95em; color:#444; margin:6px 0 10px;">
+                    目前星星：<b id="adminStarsCurrent">0</b> 顆 ｜ 調整：<b id="adminStarsDelta">0</b> 顆 ｜ 調整後：<b id="adminStarsAfter">0</b>/<span id="adminStarsMax">36</span> 顆
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <input id="adminAddStarsInput" type="number" value="0" oninput="UIManager.adminUpdateStarPreview()" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid #ccc;" placeholder="可輸入正負數，例如 3 或 -3">
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(1)">+1</button>
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(3)">+3</button>
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(5)">+5</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+                    <div style="flex:1"></div>
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(-1)">-1</button>
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(-3)">-3</button>
+                    <button class="difficulty-btn" style="flex:0 0 auto; padding:10px 12px;" onclick="UIManager.adminQuickAdd(-5)">-5</button>
+                </div>
                 <div class="difficulty-buttons">
+                    <button class="difficulty-btn" style="background: linear-gradient(135deg,#66bb6a,#43a047); color:#fff;" onclick="UIManager.adminApplyStars()">套用調整並回首頁</button>
                     <button class="difficulty-btn close-modal" onclick="UIManager.closeAdminModal()">關閉</button>
                 </div>
             </div>
@@ -3522,6 +3539,35 @@
                 
                 return remainingToConsume === 0;
             },
+            addStars(count) {
+                // 依序把星星加到各關卡：1→6，每關先把「簡單」補滿到 3，再補「困難」到 3，然後再到下一關
+                let remaining = Math.max(0, parseInt(count) || 0);
+                if (remaining <= 0) return 0;
+                let added = 0;
+                for (let levelId = 1; levelId <= 6 && remaining > 0; levelId++) {
+                    // 先補簡單
+                    const easyKey = `level_${levelId}_easy`;
+                    let easyStars = parseInt(localStorage.getItem(easyKey)) || 0;
+                    if (easyStars < 3 && remaining > 0) {
+                        const canAdd = Math.min(3 - easyStars, remaining);
+                        easyStars += canAdd;
+                        localStorage.setItem(easyKey, easyStars);
+                        remaining -= canAdd;
+                        added += canAdd;
+                    }
+                    // 再補困難
+                    const hardKey = `level_${levelId}_hard`;
+                    let hardStars = parseInt(localStorage.getItem(hardKey)) || 0;
+                    if (hardStars < 3 && remaining > 0) {
+                        const canAdd = Math.min(3 - hardStars, remaining);
+                        hardStars += canAdd;
+                        localStorage.setItem(hardKey, hardStars);
+                        remaining -= canAdd;
+                        added += canAdd;
+                    }
+                }
+                return added;
+            },
             clearAllRecords() {
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
@@ -3800,12 +3846,120 @@
 
             openAdminModal() {
                 const modal = document.getElementById('adminGameModal');
-                if (modal) modal.classList.add('active');
+                if (modal) {
+                    modal.classList.add('active');
+                    // 初始化星星預覽
+                    const maxEl = document.getElementById('adminStarsMax');
+                    const curEl = document.getElementById('adminStarsCurrent');
+                    const deltaEl = document.getElementById('adminStarsDelta');
+                    const afterEl = document.getElementById('adminStarsAfter');
+                    const input = document.getElementById('adminAddStarsInput');
+                    const max = this.getMaxTotalStars();
+                    const cur = this.getTotalStars();
+                    if (maxEl) maxEl.textContent = String(max);
+                    if (curEl) curEl.textContent = String(cur);
+                    if (deltaEl) deltaEl.textContent = '0';
+                    if (afterEl) afterEl.textContent = String(cur);
+                    if (input) input.value = '0';
+                }
             },
 
             closeAdminModal() {
                 const modal = document.getElementById('adminGameModal');
                 if (modal) modal.classList.remove('active');
+            },
+
+            getMaxTotalStars() {
+                try {
+                    return (Array.isArray(Levels) ? Levels.length : 6) * 2 * 3;
+                } catch { return 36; }
+            },
+
+            adminUpdateStarPreview() {
+                const input = document.getElementById('adminAddStarsInput');
+                const curEl = document.getElementById('adminStarsCurrent');
+                const deltaEl = document.getElementById('adminStarsDelta');
+                const afterEl = document.getElementById('adminStarsAfter');
+                const maxEl = document.getElementById('adminStarsMax');
+                const max = this.getMaxTotalStars();
+                const current = this.getTotalStars();
+                let delta = parseInt(input && input.value || '0') || 0;
+                // clamp delta to capacity
+                if (delta > 0) delta = Math.min(delta, max - current);
+                if (delta < 0) delta = -Math.min(-delta, current);
+                if (input) input.value = String(delta);
+                if (curEl) curEl.textContent = String(current);
+                if (deltaEl) deltaEl.textContent = String(delta);
+                if (afterEl) afterEl.textContent = String(current + delta);
+                if (maxEl) maxEl.textContent = String(max);
+            },
+
+            adminQuickAdd(n) {
+                const input = document.getElementById('adminAddStarsInput');
+                if (!input) return;
+                const max = this.getMaxTotalStars();
+                const currentTotal = this.getTotalStars();
+                let val = parseInt(input.value || '0') || 0;
+                val += n;
+                if (val > 0) val = Math.min(val, max - currentTotal);
+                if (val < 0) val = -Math.min(-val, currentTotal);
+                input.value = String(val);
+                this.adminUpdateStarPreview();
+            },
+
+            adminApplyStars() {
+                try {
+                    const input = document.getElementById('adminAddStarsInput');
+                    let delta = parseInt(input && input.value || '0') || 0;
+                    const max = this.getMaxTotalStars();
+                    const before = this.getTotalStars();
+                    // capacity clamps
+                    if (delta > 0) delta = Math.min(delta, max - before);
+                    if (delta < 0) delta = -Math.min(-delta, before);
+                    if (delta === 0) { alert('沒有可套用的調整。'); return; }
+
+                    let ok = true; let applied = 0;
+                    if (delta > 0) {
+                        applied = Storage.addStars(delta);
+                        ok = applied === delta;
+                    } else if (delta < 0) {
+                        const count = -delta;
+                        ok = Storage.consumeStarsSequentially(count);
+                        applied = count; // 因為已經夠可扣
+                    }
+
+                    // 重繪並回首頁
+                    this.renderLevelMap();
+                    this.closeAdminModal();
+                    this.showScreen('map');
+
+                    const after = this.getTotalStars();
+                    alert(`星星已調整：${before} → ${after}（${delta > 0 ? '+' : ''}${after - before}）`);
+                } catch (e) {
+                    console.error('adminApplyStars error', e);
+                    alert('操作失敗，請稍後再試。');
+                }
+            },
+
+            adminAddStars() {
+                try {
+                    const input = document.getElementById('adminAddStarsInput');
+                    const val = parseInt(input && input.value || '0');
+                    const toAdd = Math.max(0, val || 0);
+                    if (toAdd <= 0) { alert('請輸入要增加的星星數（至少 1 顆）'); return; }
+                    const added = Storage.addStars(toAdd);
+                    if (added > 0) {
+                        this.renderLevelMap();
+                        this.closeAdminModal();
+                        this.showScreen('map');
+                        alert(`已增加 ${added} 顆星星！`);
+                    } else {
+                        alert('目前所有關卡的簡單/困難紀錄都已是 3 顆星，沒有可新增的空位。');
+                    }
+                } catch (e) {
+                    console.error('adminAddStars error', e);
+                    alert('操作失敗，請稍後再試。');
+                }
             },
 
             openResultBonusModal() {
