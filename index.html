@@ -1292,18 +1292,16 @@
             -webkit-user-select: none;
             -webkit-touch-callout: none;
         }
-        /* On-screen joystick */
+        /* On-screen joystick (moved below canvas) */
         .bh-joystick {
-            position: absolute;
-            left: 14px;
-            bottom: 14px;
+            position: relative;
             width: 120px; height: 120px;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            z-index: 5;
             display: none; /* default hidden on desktop */
+            margin: 0 auto; /* center in footer */
         }
         .bh-joy-base {
             position: absolute; inset: 0;
@@ -1613,14 +1611,14 @@
             </div>
           </div>
           <div class="screen-body" style="display:flex; justify-content:center; position:relative;">
+            <canvas id="bhCanvas" width="720" height="480" style="background:#0b1e2b; border-radius:12px; box-shadow: inset 0 0 40px rgba(0,0,0,0.6);"></canvas>
+          </div>
+          <div class="screen-footer" style="text-align:center; margin-top:8px; color:#ddd;">
             <div id="bhJoystick" class="bh-joystick" aria-hidden="false">
               <div class="bh-joy-base"></div>
               <div class="bh-joy-knob" id="bhJoyKnob"></div>
             </div>
-            <canvas id="bhCanvas" width="720" height="480" style="background:#0b1e2b; border-radius:12px; box-shadow: inset 0 0 40px rgba(0,0,0,0.6);"></canvas>
-          </div>
-          <div class="screen-footer" style="text-align:center; margin-top:8px; color:#ddd;">
-            - 操作 -
+            <div style="margin-top:8px;">- 操作 -</div>
             <div style="font-size:0.95em; margin-top:4px;">
               • 電腦：方向鍵/WASD 移動 • 滑鼠/觸控：按住畫面方向拖移
             </div>
