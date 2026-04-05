@@ -2927,19 +2927,31 @@
               const knob = document.getElementById('bhJoyKnob');
               if (!joyEl || !knob) return;
               this.joy.base = joyEl; this.joy.knob = knob; this.joy.radius = joyEl.clientWidth/2;
-              const rect = joyEl.getBoundingClientRect();
-              this.joy.center = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+              const getCenter = ()=>{
+                const r = joyEl.getBoundingClientRect();
+                return { x: r.left + r.width/2, y: r.top + r.height/2, r };
+              };
               const handle = (clientX, clientY)=>{
-                const dx = clientX - this.joy.center.x;
-                const dy = clientY - this.joy.center.y;
+                // 以當前 DOM 幾何重新計算中心，避免滾動/地址列顯示隱藏造成偏移
+                const c = getCenter();
+                const dx = clientX - c.x;
+                const dy = clientY - c.y;
                 const dist = Math.hypot(dx,dy) || 1;
-                const maxR = this.joy.radius - 8;
+                const maxR = (joyEl.clientWidth/2) - 8;
                 const nx = dx / dist, ny = dy / dist;
                 const clamped = Math.min(dist, maxR);
-                knob.style.transform = `translate(calc(-50% + ${nx*clamped}px), calc(-50% + ${ny*clamped}px))`;
-                this.joy.dir.x = nx; this.joy.dir.y = ny; this.joy.active = true;
+                // 死區，避免輕觸時抖動
+                const deadZone = 6;
+                const useDist = Math.max(0, clamped - deadZone);
+                const ratio = useDist / Math.max(1, (maxR - deadZone));
+                const px = nx * (deadZone + ratio*(maxR - deadZone));
+                const py = ny * (deadZone + ratio*(maxR - deadZone));
+                knob.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
+                if (useDist <= 0) { this.joy.dir.x = 0; this.joy.dir.y = 0; }
+                else { this.joy.dir.x = nx; this.joy.dir.y = ny; }
+                this.joy.active = true;
               };
-              const start = (e)=>{ e.preventDefault(); const t = e.touches? e.touches[0] : e; handle(t.clientX, t.clientY); };
+              const start = (e)=>{ e.preventDefault(); const t = e.touches? e.touches[0] : e; this.joy.radius = joyEl.clientWidth/2; handle(t.clientX, t.clientY); };
               const move  = (e)=>{ if (!this.joy.active) return; e.preventDefault(); const t = e.touches? e.touches[0] : e; handle(t.clientX, t.clientY); };
               const end   = ()=>{ this.joy.active = false; this.joy.dir.x = 0; this.joy.dir.y = 0; knob.style.transform = 'translate(-50%, -50%)'; };
               // 綁定
@@ -2947,15 +2959,14 @@
               joyEl.addEventListener('touchstart', start, {passive:false});
               joyEl.addEventListener('touchmove', move, {passive:false});
               window.addEventListener('touchend', end, {passive:false});
+              window.addEventListener('touchcancel', end, {passive:false});
               joyEl.addEventListener('mousedown', start);
               window.addEventListener('mousemove', move);
               window.addEventListener('mouseup', end);
-              // 視窗尺寸變化時，更新中心座標
-              this._joyResize = ()=>{
-                const r = joyEl.getBoundingClientRect();
-                this.joy.center = { x: r.left + r.width/2, y: r.top + r.height/2 };
-              };
+              // 尺寸/滾動變化：不需預存中心，保留空函式便於清理
+              this._joyResize = ()=>{};
               window.addEventListener('resize', this._joyResize);
+              window.addEventListener('scroll', this._joyResize, true);
             } catch (e) { console.warn('setupJoystick error', e); }
           },
           destroyJoystick(){
