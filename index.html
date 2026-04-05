@@ -1278,6 +1278,23 @@
                 font-size: 42px;
             }
         }
+        /* === Mobile optimization for Black Hole game === */
+        #blackholeScreen { overscroll-behavior: contain; }
+        #blackholeScreen .screen-body { width: 100%; touch-action: none; }
+        #bhCanvas {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 70vh;
+            touch-action: none;
+            -ms-touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        @media (max-width: 600px) {
+            #blackholeHeader { flex-wrap: wrap; gap: 6px; }
+        }
     </style>
 </head>
 
@@ -2647,9 +2664,12 @@
               this.reset();
               UIManager.showScreen('blackhole');
               const c = document.getElementById('bhCanvas');
-              c.width = this.width; c.height = this.height;
               this.ctx = c.getContext('2d');
+              this.setupHiDPI(c);
               this.bindInputs(c);
+              // 監聽視窗尺寸改變（手機旋轉）
+              this.onResize = ()=>{ this.setupHiDPI(c); };
+              window.addEventListener('resize', this.onResize);
               this.running = true;
               this.lastTS = performance.now();
               requestAnimationFrame(this.loop.bind(this));
@@ -2659,6 +2679,8 @@
           stop() {
             this.running = false;
             this.unbindInputs();
+            // 解除視窗 resize 監聽
+            if (this.onResize) window.removeEventListener('resize', this.onResize);
             UIManager.showScreen('map');
           },
           reset() {
@@ -2828,10 +2850,11 @@
               const rect = canvas.getBoundingClientRect();
               const x = (ev.touches? ev.touches[0].clientX : ev.clientX) - rect.left;
               const y = (ev.touches? ev.touches[0].clientY : ev.clientY) - rect.top;
-              return { x: x * (canvas.width/rect.width), y: y * (canvas.height/rect.height) };
+              // 以邏輯尺寸（this.width/height）轉換，避免 HiDPI 與 CSS 縮放誤差
+              return { x: x * (this.width/rect.width), y: y * (this.height/rect.height) };
             };
-            this.pointerDown = (e)=>{ this.input.pointer = getPos(e); };
-            this.pointerMove = (e)=>{ if (this.input.pointer) this.input.pointer = getPos(e); };
+            this.pointerDown = (e)=>{ if (e.touches) e.preventDefault(); this.input.pointer = getPos(e); };
+            this.pointerMove = (e)=>{ if (e.touches) e.preventDefault(); if (this.input.pointer) this.input.pointer = getPos(e); };
             this.pointerUp = ()=>{ this.input.pointer = null; };
             canvas.addEventListener('mousedown', this.pointerDown);
             canvas.addEventListener('mousemove', this.pointerMove);
@@ -2852,7 +2875,28 @@
             c.removeEventListener('touchmove', this.pointerMove);
             window.removeEventListener('touchend', this.pointerUp);
           },
-          dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
+          dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; },
+          // HiDPI 畫布設定：讓圖像在手機/平板更銳利，同時維持 720x480 的遊戲座標系
+          setupHiDPI(canvas){
+            if (!this.ctx) this.ctx = canvas.getContext('2d');
+            const ctx = this.ctx;
+            const rect = canvas.getBoundingClientRect();
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            // 設定實際繪圖緩衝區大小（像素）
+            const bufferW = Math.max(1, Math.round(rect.width * dpr));
+            const bufferH = Math.max(1, Math.round(rect.height * dpr));
+            if (canvas.width !== bufferW || canvas.height !== bufferH) {
+              canvas.width = bufferW;
+              canvas.height = bufferH;
+            }
+            // 將 720x480 的邏輯座標映射到實際像素
+            const scaleX = bufferW / this.width;
+            const scaleY = bufferH / this.height;
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+            // 平滑設定
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+          }
         };
 
         // 森林切切樂 小遊戲
