@@ -1339,6 +1339,18 @@
                         <small>動作休閒 • 目標 100 分</small>
                     </div>
                 </div>
+                <div class="practice-card" onclick="BlackHoleGame.start()" style="position: relative;">
+                  <div style="position: absolute; top: 10px; right: 10px; background: #ff4d4d; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    一次 3 ⭐
+                  </div>
+                  <div class="practice-icon">🕳️</div>
+                  <h3>黑洞大作戰</h3>
+                  <div class="practice-description">
+                    從小開始壯大！<br>
+                    🌀 吞噬比你小的物件、躲避大的！<br>
+                    <small>動作競技 • 限時 90 秒</small>
+                  </div>
+                </div>
             </div>
         </div>
 
@@ -1386,6 +1398,7 @@
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); Match3Game.start(true)">🍓 森林消消樂</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); MemoryGame.start(true)">🧠 森林記憶王</button>
                     <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); FruitGame.start(true)">🍉 森林切切樂</button>
+                    <button class="difficulty-btn" onclick="UIManager.closeAdminModal(); BlackHoleGame.start(true)">🕳️ 黑洞大作戰</button>
                 </div>
                 <div style="margin:10px 0 8px; font-weight:bold; color:#6d4c41;">🌟 星星管理</div>
                 <div style="font-size:0.95em; color:#444; margin:6px 0 10px;">
@@ -1537,7 +1550,29 @@
             </div>
             <p style="text-align: center; margin-top: 10px; color: #666;">找出兩兩成對的卡片吧！</p>
         </div>
-
+        
+        <!-- 黑洞大作戰：畫面容器 -->
+        <div id="blackholeScreen" class="game-screen" style="display:none;">
+          <div class="game-header" id="blackholeHeader">
+            <button class="back-btn" onclick="BlackHoleGame.stop()">返回地圖</button>
+            <div class="game-info">
+              <div class="info-item">🕳️ 黑洞大作戰</div>
+              <div class="info-item">⏱️ 倒數：<b id="bhTime">90</b>s</div>
+              <div class="info-item">得分：<b id="bhScore">0</b></div>
+              <div class="info-item">等級：<b id="bhLevel">1</b></div>
+            </div>
+          </div>
+          <div class="screen-body" style="display:flex; justify-content:center;">
+            <canvas id="bhCanvas" width="720" height="480" style="background:#0b1e2b; border-radius:12px; box-shadow: inset 0 0 40px rgba(0,0,0,0.6);"></canvas>
+          </div>
+          <div class="screen-footer" style="text-align:center; margin-top:8px; color:#ddd;">
+            - 操作 -
+            <div style="font-size:0.95em; margin-top:4px;">
+              • 電腦：方向鍵/WASD 移動 • 滑鼠/觸控：按住畫面方向拖移
+            </div>
+          </div>
+        </div>
+        
         <!-- 森林切切樂遊戲畫面 -->
         <div id="fruitScreen" class="game-screen">
             <div class="game-header">
@@ -2580,6 +2615,244 @@
                     this.stop = originalStop; // 還原
                 };
             }
+        };
+
+        // 黑洞大作戰：簡化版核心玩法
+        const BlackHoleGame = {
+          // 遊戲參數
+          width: 720,
+          height: 480,
+          duration: 90, // 秒
+          baseSpeed: 2.2,
+          hole: { x: 360, y: 240, r: 16, vx: 0, vy: 0 },
+          items: [],      // 可吞噬（綠）
+          threats: [],    // 需要躲避（紅）
+          score: 0,
+          level: 1,
+          timeLeft: 90,
+          running: false,
+          lastTS: 0,
+          input: { up:false, down:false, left:false, right:false, pointer:null },
+          ctx: null,
+          // 星星消耗與進出
+          start(bypass=false) {
+            try {
+              if (!bypass) {
+                const available = UIManager.getAvailableStars();
+                if (available < 3) { alert('🌟 需要 3 顆可用星星才能玩「黑洞大作戰」！'); return; }
+                if (!confirm('確定要花費 3 顆星星開始「黑洞大作戰」嗎？')) return;
+                if (!Storage.consumeStarsSequentially(3)) return;
+                UIManager.renderLevelMap();
+              }
+              this.reset();
+              UIManager.showScreen('blackhole');
+              const c = document.getElementById('bhCanvas');
+              c.width = this.width; c.height = this.height;
+              this.ctx = c.getContext('2d');
+              this.bindInputs(c);
+              this.running = true;
+              this.lastTS = performance.now();
+              requestAnimationFrame(this.loop.bind(this));
+              this.tickTimer();
+            } catch (e) { console.error(e); alert('啟動遊戲時發生問題'); }
+          },
+          stop() {
+            this.running = false;
+            this.unbindInputs();
+            UIManager.showScreen('map');
+          },
+          reset() {
+            this.score = 0; this.level = 1; this.timeLeft = this.duration;
+            this.hole = { x: this.width/2, y: this.height/2, r: 16, vx:0, vy:0 };
+            this.items = []; this.threats = [];
+            this.spawnWave();
+            const s = document.getElementById('bhScore'); if (s) s.textContent = '0';
+            const l = document.getElementById('bhLevel'); if (l) l.textContent = '1';
+            const t = document.getElementById('bhTime'); if (t) t.textContent = String(this.duration);
+          },
+          // 生成物件
+          spawnWave() {
+            const itemCount = 28 + this.level * 4;
+            const threatCount = Math.min(2 + Math.floor(this.level/2), 8);
+            for (let i=0;i<itemCount;i++) {
+              const r = 4 + Math.random() * Math.max(6, this.hole.r * 0.8);
+              this.items.push(this.spawnCircle(r, '#66bb6a'));
+            }
+            for (let i=0;i<threatCount;i++) {
+              const r = Math.max(this.hole.r*1.2, 28) + Math.random()*Math.max(12, this.hole.r*0.8);
+              const c = this.spawnCircle(r, '#ef5350');
+              const ang = Math.random()*Math.PI*2;
+              const spd = 0.4 + Math.random()*0.9 + this.level*0.05;
+              c.vx = Math.cos(ang)*spd; c.vy = Math.sin(ang)*spd;
+              this.threats.push(c);
+            }
+          },
+          spawnCircle(r, color) {
+            let x,y; let tries=0;
+            do {
+              x = r + Math.random()*(this.width - 2*r);
+              y = r + Math.random()*(this.height - 2*r);
+              tries++;
+            } while (tries<50 && this.dist2({x,y},{x:this.hole.x,y:this.hole.y}) < Math.pow(this.hole.r+r+40,2));
+            return { x, y, r, color, vx: (Math.random()-0.5)*1.4, vy:(Math.random()-0.5)*1.4 };
+          },
+          // 遊戲主循環
+          loop(ts) {
+            if (!this.running) return;
+            const dt = Math.min(32, ts - this.lastTS);
+            this.lastTS = ts;
+            this.update(dt/16.6667);
+            this.render();
+            requestAnimationFrame(this.loop.bind(this));
+          },
+          update(dt) {
+            const speed = this.baseSpeed + Math.max(0, 1 - 16/Math.max(16,this.hole.r))*1.6;
+            let ax=0, ay=0;
+            if (this.input.left) ax -= 1; if (this.input.right) ax += 1;
+            if (this.input.up) ay -= 1; if (this.input.down) ay += 1;
+            if (this.input.pointer) {
+              const dx = this.input.pointer.x - this.hole.x;
+              const dy = this.input.pointer.y - this.hole.y;
+              const len = Math.hypot(dx,dy) || 1;
+              ax = dx/len; ay = dy/len;
+            }
+            this.hole.x += ax * speed * dt * 3.2;
+            this.hole.y += ay * speed * dt * 3.2;
+            this.hole.x = Math.max(this.hole.r, Math.min(this.width - this.hole.r, this.hole.x));
+            this.hole.y = Math.max(this.hole.r, Math.min(this.height - this.hole.r, this.hole.y));
+
+            const bounce = (o)=>{
+              o.x += o.vx * dt * 2.4; o.y += o.vy * dt * 2.4;
+              if (o.x - o.r < 0) { o.x = o.r; o.vx = Math.abs(o.vx); }
+              if (o.x + o.r > this.width) { o.x = this.width - o.r; o.vx = -Math.abs(o.vx); }
+              if (o.y - o.r < 0) { o.y = o.r; o.vy = Math.abs(o.vy); }
+              if (o.y + o.r > this.height) { o.y = this.height - o.r; o.vy = -Math.abs(o.vy); }
+            };
+            this.items.forEach(bounce);
+            this.threats.forEach(bounce);
+
+            for (let i=this.items.length-1;i>=0;i--) {
+              const it = this.items[i];
+              const d = Math.hypot(this.hole.x - it.x, this.hole.y - it.y);
+              if (d < Math.max(2, this.hole.r - it.r*0.6)) {
+                this.items.splice(i,1);
+                const gain = Math.max(1, Math.round(it.r));
+                this.score += gain;
+                const s = document.getElementById('bhScore'); if (s) s.textContent = String(this.score);
+                this.hole.r = Math.min(160, this.hole.r + Math.max(0.2, Math.pow(it.r,0.6)*0.25));
+                this.items.push(this.spawnCircle(4 + Math.random()*Math.max(6, this.hole.r*0.75), '#66bb6a'));
+                const newLevel = Math.floor(this.score/120)+1;
+                if (newLevel > this.level) {
+                  this.level = newLevel;
+                  const l = document.getElementById('bhLevel'); if (l) l.textContent = String(this.level);
+                  for (let k=0;k<1;k++) this.threats.push(this.spawnCircle(Math.max(this.hole.r*1.25, 28)+Math.random()*Math.max(12, this.hole.r*0.8), '#ef5350'));
+                }
+              }
+            }
+
+            for (const th of this.threats) {
+              const d = Math.hypot(this.hole.x - th.x, this.hole.y - th.y);
+              if (d < (this.hole.r + th.r) * 0.85 && th.r > this.hole.r * 0.98) {
+                this.gameOver(false);
+                return;
+              }
+            }
+
+            if (this.items.length < 20) {
+              for (let i=0;i<8;i++) this.items.push(this.spawnCircle(4 + Math.random()*Math.max(6, this.hole.r*0.75), '#66bb6a'));
+            }
+          },
+          render() {
+            const ctx = this.ctx; if (!ctx) return;
+            ctx.clearRect(0,0,this.width,this.height);
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.lineWidth = 1;
+            for (let x=0;x<this.width;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.height); ctx.stroke(); }
+            for (let y=0;y<this.height;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.width,y); ctx.stroke(); }
+            ctx.restore();
+
+            for (const it of this.items) this.drawCircle(it.x,it.y,it.r,it.color,'rgba(0,0,0,0.35)');
+            for (const th of this.threats) this.drawCircle(th.x,th.y,th.r,th.color,'rgba(0,0,0,0.45)');
+
+            const g = ctx.createRadialGradient(this.hole.x- this.hole.r*0.3, this.hole.y- this.hole.r*0.3, this.hole.r*0.2, this.hole.x, this.hole.y, this.hole.r);
+            g.addColorStop(0, '#263238');
+            g.addColorStop(1, '#000000');
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(this.hole.x, this.hole.y, this.hole.r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = 'rgba(33,150,243,0.25)'; ctx.lineWidth = 3; ctx.stroke();
+          },
+          drawCircle(x,y,r,fill,shadow) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.fillStyle = fill;
+            ctx.shadowColor = shadow; ctx.shadowBlur = 12; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+            ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+          },
+          tickTimer() {
+            const tEl = document.getElementById('bhTime');
+            const go = ()=>{
+              if (!this.running) return;
+              this.timeLeft -= 1; if (tEl) tEl.textContent = String(Math.max(0,this.timeLeft));
+              if (this.timeLeft <= 0) { this.gameOver(true); return; }
+              setTimeout(go, 1000);
+            };
+            setTimeout(go, 1000);
+          },
+          gameOver(timeUp) {
+            this.running = false;
+            this.unbindInputs();
+            const msg = timeUp ? '時間到！' : '被更大的黑洞吞掉啦！';
+            setTimeout(()=>{
+              if (confirm(`${msg}\n本次得分：${this.score}\n\n要再玩一次嗎？`)) {
+                this.start(true);
+              } else {
+                UIManager.showScreen('map');
+              }
+            }, 30);
+          },
+          bindInputs(canvas) {
+            this.keyHandler = (e)=>{
+              const on = (e.type === 'keydown');
+              if (['ArrowUp','KeyW'].includes(e.code)) { this.input.up = on; e.preventDefault(); }
+              if (['ArrowDown','KeyS'].includes(e.code)) { this.input.down = on; e.preventDefault(); }
+              if (['ArrowLeft','KeyA'].includes(e.code)) { this.input.left = on; e.preventDefault(); }
+              if (['ArrowRight','KeyD'].includes(e.code)) { this.input.right = on; e.preventDefault(); }
+            };
+            window.addEventListener('keydown', this.keyHandler);
+            window.addEventListener('keyup', this.keyHandler);
+
+            const getPos = (ev)=>{
+              const rect = canvas.getBoundingClientRect();
+              const x = (ev.touches? ev.touches[0].clientX : ev.clientX) - rect.left;
+              const y = (ev.touches? ev.touches[0].clientY : ev.clientY) - rect.top;
+              return { x: x * (canvas.width/rect.width), y: y * (canvas.height/rect.height) };
+            };
+            this.pointerDown = (e)=>{ this.input.pointer = getPos(e); };
+            this.pointerMove = (e)=>{ if (this.input.pointer) this.input.pointer = getPos(e); };
+            this.pointerUp = ()=>{ this.input.pointer = null; };
+            canvas.addEventListener('mousedown', this.pointerDown);
+            canvas.addEventListener('mousemove', this.pointerMove);
+            window.addEventListener('mouseup', this.pointerUp);
+            canvas.addEventListener('touchstart', this.pointerDown, {passive:false});
+            canvas.addEventListener('touchmove', this.pointerMove, {passive:false});
+            window.addEventListener('touchend', this.pointerUp, {passive:false});
+          },
+          unbindInputs() {
+            window.removeEventListener('keydown', this.keyHandler);
+            window.removeEventListener('keyup', this.keyHandler);
+            const c = document.getElementById('bhCanvas');
+            if (!c) return;
+            c.removeEventListener('mousedown', this.pointerDown);
+            c.removeEventListener('mousemove', this.pointerMove);
+            window.removeEventListener('mouseup', this.pointerUp);
+            c.removeEventListener('touchstart', this.pointerDown);
+            c.removeEventListener('touchmove', this.pointerMove);
+            window.removeEventListener('touchend', this.pointerUp);
+          },
+          dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
         };
 
         // 森林切切樂 小遊戲
@@ -4058,7 +4331,8 @@
                     'match3': document.getElementById('match3Screen'),
                     'memory': document.getElementById('memoryScreen'),
                     'shooter': document.getElementById('shooterScreen'),
-                    'fruit': document.getElementById('fruitScreen')
+                    'fruit': document.getElementById('fruitScreen'),
+                                        'blackhole': document.getElementById('blackholeScreen')
                 };
 
                 // 隱藏地圖相關
