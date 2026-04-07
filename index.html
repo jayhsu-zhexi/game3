@@ -425,9 +425,10 @@
             background: white;
             border-radius: 25px;
             padding: clamp(15px, 5vw, 40px);
-            max-width: 800px;
+            max-width: 1200px; /* 從 800px 增加 */
             margin: 0 auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 95%; /* 確保在大螢幕也能擴張 */
         }
 
         .game-screen.active {
@@ -2674,11 +2675,13 @@
                   // 虛擬搖桿狀態
                   joy: { active:false, base:null, knob:null, center:{x:0,y:0}, radius:60, dir:{x:0,y:0} },
           // 遊戲參數
-          width: 720,
-          height: 480,
+          width: 2400, // 增加地圖寬度 (原 720)
+          height: 2400, // 增加地圖高度 (原 480)
+          viewWidth: 720, // 顯示視窗寬度
+          viewHeight: 480, // 顯示視窗高度
           duration: 90, // 秒
           baseSpeed: 2.2,
-          hole: { x: 360, y: 240, r: 16, vx: 0, vy: 0 },
+          hole: { x: 1200, y: 1200, r: 16, vx: 0, vy: 0 },
           items: [],      // 可吞噬（綠）
           threats: [],    // 需要躲避（紅）
           score: 0,
@@ -2688,6 +2691,7 @@
           lastTS: 0,
           input: { up:false, down:false, left:false, right:false, pointer:null },
           ctx: null,
+          camera: { x: 0, y: 0 },
           // 星星消耗與進出
           start(bypass=false) {
             try {
@@ -2725,6 +2729,7 @@
           reset() {
             this.score = 0; this.level = 1; this.timeLeft = this.duration;
             this.hole = { x: this.width/2, y: this.height/2, r: 16, vx:0, vy:0 };
+            this.camera = { x: this.hole.x - this.viewWidth/2, y: this.hole.y - this.viewHeight/2 };
             this.items = []; this.threats = [];
             this.spawnWave();
             const s = document.getElementById('bhScore'); if (s) s.textContent = '0';
@@ -2733,8 +2738,8 @@
           },
           // 生成物件
           spawnWave() {
-            const itemCount = 28 + this.level * 4;
-            const threatCount = Math.min(2 + Math.floor(this.level/2), 8);
+            const itemCount = 120 + this.level * 20; // 增加數量以填充大面積
+            const threatCount = Math.min(8 + Math.floor(this.level/2), 25); // 增加威脅數量
             for (let i=0;i<itemCount;i++) {
               const r = 4 + Math.random() * Math.max(6, this.hole.r * 0.8);
               this.items.push(this.spawnCircle(r, '#66bb6a'));
@@ -2772,8 +2777,11 @@
             if (this.joy && this.joy.active) {
               ax = this.joy.dir.x; ay = this.joy.dir.y;
             } else if (this.input.pointer) {
-              const dx = this.input.pointer.x - this.hole.x;
-              const dy = this.input.pointer.y - this.hole.y;
+              // 在攝像機系統中，指標位置需加上攝像機偏移
+              const targetX = this.input.pointer.x + this.camera.x;
+              const targetY = this.input.pointer.y + this.camera.y;
+              const dx = targetX - this.hole.x;
+              const dy = targetY - this.hole.y;
               const len = Math.hypot(dx,dy) || 1;
               ax = dx/len; ay = dy/len;
             } else {
@@ -2786,6 +2794,13 @@
             this.hole.y += ay * speed * dt * 3.2;
             this.hole.x = Math.max(this.hole.r, Math.min(this.width - this.hole.r, this.hole.x));
             this.hole.y = Math.max(this.hole.r, Math.min(this.height - this.hole.r, this.hole.y));
+
+            // 更新攝像機位置 (平滑跟隨)
+            const targetCamX = this.hole.x - this.viewWidth/2;
+            const targetCamY = this.hole.y - this.viewHeight/2;
+            // 限制攝像機不超出地圖邊界
+            this.camera.x += (Math.max(0, Math.min(this.width - this.viewWidth, targetCamX)) - this.camera.x) * 0.1;
+            this.camera.y += (Math.max(0, Math.min(this.height - this.viewHeight, targetCamY)) - this.camera.y) * 0.1;
 
             const bounce = (o)=>{
               o.x += o.vx * dt * 2.4; o.y += o.vy * dt * 2.4;
@@ -2824,30 +2839,37 @@
               }
             }
 
-            if (this.items.length < 20) {
-              for (let i=0;i<8;i++) this.items.push(this.spawnCircle(4 + Math.random()*Math.max(6, this.hole.r*0.75), '#66bb6a'));
+            if (this.items.length < 80) {
+              for (let i=0;i<20;i++) this.items.push(this.spawnCircle(4 + Math.random()*Math.max(6, this.hole.r*0.75), '#66bb6a'));
             }
           },
           render() {
             const ctx = this.ctx; if (!ctx) return;
-            ctx.clearRect(0,0,this.width,this.height);
+            ctx.clearRect(0,0,this.viewWidth,this.viewHeight);
 
             ctx.save();
+            // 應用攝像機轉換
+            ctx.translate(-this.camera.x, -this.camera.y);
+
+            // 繪製地圖背景網格 (擴展到地圖大小)
             ctx.strokeStyle = 'rgba(255,255,255,0.06)';
             ctx.lineWidth = 1;
-            for (let x=0;x<this.width;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.height); ctx.stroke(); }
-            for (let y=0;y<this.height;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.width,y); ctx.stroke(); }
-            ctx.restore();
+            for (let x=0;x<=this.width;x+=80){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.height); ctx.stroke(); }
+            for (let y=0;y<=this.height;y+=80){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.width,y); ctx.stroke(); }
 
+            // 繪製物件與威脅
             for (const it of this.items) this.drawCircle(it.x,it.y,it.r,it.color,'rgba(0,0,0,0.35)');
             for (const th of this.threats) this.drawCircle(th.x,th.y,th.r,th.color,'rgba(0,0,0,0.45)');
 
+            // 繪製黑洞
             const g = ctx.createRadialGradient(this.hole.x- this.hole.r*0.3, this.hole.y- this.hole.r*0.3, this.hole.r*0.2, this.hole.x, this.hole.y, this.hole.r);
             g.addColorStop(0, '#263238');
             g.addColorStop(1, '#000000');
             ctx.fillStyle = g;
             ctx.beginPath(); ctx.arc(this.hole.x, this.hole.y, this.hole.r, 0, Math.PI*2); ctx.fill();
             ctx.strokeStyle = 'rgba(33,150,243,0.25)'; ctx.lineWidth = 3; ctx.stroke();
+
+            ctx.restore();
           },
           drawCircle(x,y,r,fill,shadow) {
             const ctx = this.ctx;
@@ -2894,8 +2916,8 @@
               const rect = canvas.getBoundingClientRect();
               const x = (ev.touches? ev.touches[0].clientX : ev.clientX) - rect.left;
               const y = (ev.touches? ev.touches[0].clientY : ev.clientY) - rect.top;
-              // 以邏輯尺寸（this.width/height）轉換，避免 HiDPI 與 CSS 縮放誤差
-              return { x: x * (this.width/rect.width), y: y * (this.height/rect.height) };
+              // 以視圖邏輯尺寸（this.viewWidth/viewHeight）轉換，避免大地圖偏移與比例誤差
+              return { x: x * (this.viewWidth/rect.width), y: y * (this.viewHeight/rect.height) };
             };
             this.pointerDown = (e)=>{ if (e.touches) e.preventDefault(); this.input.pointer = getPos(e); };
             this.pointerMove = (e)=>{ if (e.touches) e.preventDefault(); if (this.input.pointer) this.input.pointer = getPos(e); };
@@ -2918,6 +2940,7 @@
             c.removeEventListener('touchstart', this.pointerDown);
             c.removeEventListener('touchmove', this.pointerMove);
             window.removeEventListener('touchend', this.pointerUp);
+            window.removeEventListener('touchcancel', this.pointerUp);
           },
           dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; },
           // 建立虛擬搖桿（手機）
@@ -2996,8 +3019,8 @@
               canvas.height = bufferH;
             }
             // 將 720x480 的邏輯座標映射到實際像素
-            const scaleX = bufferW / this.width;
-            const scaleY = bufferH / this.height;
+            const scaleX = bufferW / this.viewWidth;
+            const scaleY = bufferH / this.viewHeight;
             ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
             // 平滑設定
             ctx.imageSmoothingEnabled = true;
