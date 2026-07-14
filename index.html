@@ -4552,7 +4552,7 @@
             showScreen(screen) {
                 const map = document.getElementById('levelMap');
                 const practice = document.querySelector('.practice-section');
-                const miniGame = document.querySelector('.mini-game-section');
+                const miniGames = document.querySelectorAll('.mini-game-section');
                 const reset = document.getElementById('resetSection');
                 const title = document.querySelector('.game-title');
                 const directBonus = document.getElementById('directBonusSection');
@@ -4569,9 +4569,13 @@
                 };
 
                 // 隱藏地圖相關
-                [map, practice, miniGame, reset, title, directBonus].forEach(el => {
+                [map, practice, reset, title, directBonus].forEach(el => {
                     if (el) el.style.display = 'none';
                 });
+                // 隱藏所有迷你遊戲/主題區塊
+                if (miniGames && miniGames.length) {
+                    miniGames.forEach(el => el.style.display = 'none');
+                }
 
                 // 隱藏所有遊戲畫面
                 Object.values(screens).forEach(el => {
@@ -4583,10 +4587,12 @@
 
                 if (screen === 'map') {
                     map.style.display = 'grid';
-                    practice.style.display = 'block';
-                    if (miniGame) miniGame.style.display = 'block';
+                    if (practice) practice.style.display = 'block';
+                    if (miniGames && miniGames.length) {
+                        miniGames.forEach(el => el.style.display = 'block');
+                    }
                     if (reset) reset.style.display = 'block';
-                    title.style.display = 'block';
+                    if (title) title.style.display = 'block';
                     if (directBonus) directBonus.style.display = 'block';
                     this.renderLevelMap();
                 } else if (screens[screen]) {
