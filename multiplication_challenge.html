@@ -32,6 +32,45 @@
             overflow-x: hidden;
         }
 
+        /* 螢幕數字鍵盤樣式 */
+        .onscreen-keypad {
+            position: static; /* 直接跟著題目顯示在下方 */
+            width: 100%;
+            max-width: 420px;
+            margin: 10px auto 0;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid var(--electric-blue);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), var(--neon-glow);
+            backdrop-filter: blur(6px);
+            display: none; /* 觸控裝置開始遊戲後顯示 */
+            user-select: none;
+        }
+        .onscreen-keypad .key-row {
+            display: flex;
+            gap: 10px;
+            margin: 6px 0;
+        }
+        .onscreen-keypad .key {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 12px 0;
+            font-size: 1.4rem;
+            cursor: pointer;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+        }
+        .onscreen-keypad .key:active { transform: scale(0.98); }
+        .onscreen-keypad .key.action {
+            background: rgba(0, 242, 255, 0.15);
+            border-color: var(--electric-blue);
+        }
+        /* 鍵盤內嵌於題目下方，無需額外底部內距 */
+        body.keypad-visible { padding-bottom: 0; }
+
         /* 卡牌背面設計 */
         .card-back {
             width: 200px;
@@ -367,10 +406,34 @@
             <div class="card-face card-front">
                 <div id="question" class="question">? × ?</div>
                 <div class="input-area">
-                    <input type="number" id="answer-input" placeholder="?" autocomplete="off">
+                    <input type="number" id="answer-input" placeholder="?" autocomplete="off" inputmode="none">
                     <div id="feedback" class="feedback"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 螢幕數字鍵盤：在行動裝置上使用，避免原生鍵盤遮擋題目 -->
+    <div id="onscreen-keypad" class="onscreen-keypad" aria-label="數字鍵盤" role="group">
+        <div class="key-row">
+            <button type="button" class="key">1</button>
+            <button type="button" class="key">2</button>
+            <button type="button" class="key">3</button>
+        </div>
+        <div class="key-row">
+            <button type="button" class="key">4</button>
+            <button type="button" class="key">5</button>
+            <button type="button" class="key">6</button>
+        </div>
+        <div class="key-row">
+            <button type="button" class="key">7</button>
+            <button type="button" class="key">8</button>
+            <button type="button" class="key">9</button>
+        </div>
+        <div class="key-row">
+            <button type="button" class="key action" data-action="del">⌫</button>
+            <button type="button" class="key">0</button>
+            <button type="button" class="key action" data-action="enter">✓</button>
         </div>
     </div>
 
@@ -561,6 +624,79 @@
         card.addEventListener('click', () => {
             if (!gameActive) startGame();
         });
+
+        // ===== 螢幕數字鍵盤邏輯 =====
+        (function(){
+            const keypad = document.getElementById('onscreen-keypad');
+            const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+            // 僅在觸控裝置上關閉原生鍵盤，但先不要顯示鍵盤，等開始遊戲再顯示
+            if (isTouch) {
+                inputEl.setAttribute('readonly', 'readonly');
+                inputEl.setAttribute('inputmode', 'none');
+            }
+
+            function showKeypad(show){
+                if (!keypad) return;
+                keypad.style.display = show ? 'block' : 'none';
+                document.body.classList.toggle('keypad-visible', !!show);
+            }
+
+            function appendDigit(d) {
+                if (!gameActive) return;
+                if (inputEl.value.length >= 3) return; // 乘法答案通常不超過 3 位數
+                inputEl.value = inputEl.value + d;
+                // 觸發既有的 input 判斷
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            function delDigit() {
+                if (!gameActive) return;
+                inputEl.value = inputEl.value.slice(0, -1);
+            }
+            function pressEnter() {
+                if (!gameActive) return;
+                const val = parseInt(inputEl.value);
+                if (!isNaN(val)) {
+                    if (val === currentAnswer) {
+                        handleRight();
+                    } else {
+                        handleWrong();
+                    }
+                }
+            }
+
+            if (keypad) {
+                keypad.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.key');
+                    if (!btn) return;
+                    const action = btn.dataset.action;
+                    if (action === 'del') return delDigit();
+                    if (action === 'enter') return pressEnter();
+                    const digit = btn.textContent.trim();
+                    if (/^\d$/.test(digit)) appendDigit(digit);
+                });
+            }
+
+            // 攔截開始與結束，控制鍵盤顯示
+            const _startGame = startGame;
+            startGame = function(){
+                _startGame();
+                // 開始遊戲後一律顯示螢幕鍵盤，避免某些手機偵測不到觸控而不顯示
+                showKeypad(true);
+            };
+            const _endGame = endGame;
+            endGame = function(){
+                _endGame();
+                showKeypad(false);
+            };
+
+            // 直接在開始按鈕與卡片點擊時也顯示鍵盤，避免事件綁定時機導致的覆寫失效
+            if (typeof startBtn !== 'undefined' && startBtn) {
+                startBtn.addEventListener('click', function(){ showKeypad(true); });
+            }
+            if (typeof card !== 'undefined' && card) {
+                card.addEventListener('click', function(){ if (!gameActive) showKeypad(true); });
+            }
+        })();
     </script>
 </body>
 </html>

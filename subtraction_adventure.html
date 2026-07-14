@@ -253,6 +253,32 @@
             font-size: 14px;
         }
 
+        /* 螢幕數字鍵盤樣式 */
+        .onscreen-keypad {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+            width: min(92vw, 420px);
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #2ecc71;
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: none; /* 僅在觸控裝置/題目顯示時顯示 */
+            user-select: none;
+        }
+        .onscreen-keypad .key-row {
+            display: flex; gap: 10px; margin: 6px 0;
+        }
+        .onscreen-keypad .key {
+            flex: 1; background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 12px; padding: 12px 0; font-size: 1.4rem; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+        }
+        .onscreen-keypad .key:active { transform: scale(0.98); }
+        .onscreen-keypad .key.action { background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -287,7 +313,30 @@
                 <div>- <span id="num2">267</span></div>
                 <div class="subtraction-line"></div>
             </div>
-            <input type="number" id="ans-input" class="ans-input" placeholder="答案" inputmode="numeric">
+            <input type="number" id="ans-input" class="ans-input" placeholder="答案" inputmode="none" autocomplete="off">
+            <!-- 螢幕數字鍵盤（僅觸控裝置顯示，避免原生鍵盤遮擋） -->
+            <div id="onscreen-keypad" class="onscreen-keypad" aria-label="數字鍵盤" role="group">
+                <div class="key-row">
+                    <button type="button" class="key">1</button>
+                    <button type="button" class="key">2</button>
+                    <button type="button" class="key">3</button>
+                </div>
+                <div class="key-row">
+                    <button type="button" class="key">4</button>
+                    <button type="button" class="key">5</button>
+                    <button type="button" class="key">6</button>
+                </div>
+                <div class="key-row">
+                    <button type="button" class="key">7</button>
+                    <button type="button" class="key">8</button>
+                    <button type="button" class="key">9</button>
+                </div>
+                <div class="key-row">
+                    <button type="button" class="key action" data-action="del">⌫</button>
+                    <button type="button" class="key">0</button>
+                    <button type="button" class="key action" data-action="enter">✓</button>
+                </div>
+            </div>
             <button class="submit-btn" onclick="checkAnswer()">提交答案</button>
             <p id="hint" style="margin-top: 15px; color: #e74c3c; font-weight: bold; display: none;">再試一次！記得連環退位喔！</p>
         </div>
@@ -556,6 +605,62 @@
     });
 
     window.onload = initMaze;
+
+    // ===== 螢幕數字鍵盤邏輯（僅在觸控裝置顯示，避免原生鍵盤遮擋） =====
+    (function(){
+        const keypad = document.getElementById('onscreen-keypad');
+        const input = document.getElementById('ans-input');
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        function showKeypad(show){ if (keypad) keypad.style.display = show ? 'block' : 'none'; }
+
+        if (isTouch && keypad && input) {
+            // 關閉原生鍵盤
+            input.setAttribute('readonly', 'readonly');
+            input.setAttribute('inputmode', 'none');
+        }
+
+        function appendDigit(d) {
+            input.value = (input.value || '') + d;
+        }
+        function delDigit() {
+            input.value = (input.value || '').slice(0, -1);
+        }
+        function pressEnter() {
+            // 沿用現有檢查流程
+            checkAnswer();
+        }
+
+        if (keypad) {
+            keypad.addEventListener('click', (e) => {
+                const btn = e.target.closest('.key');
+                if (!btn) return;
+                const action = btn.dataset.action;
+                if (action === 'del') return delDigit();
+                if (action === 'enter') return pressEnter();
+                const digit = btn.textContent.trim();
+                if (/^\d$/.test(digit)) appendDigit(digit);
+            });
+        }
+
+        // 在題目顯示/關閉時顯示或隱藏鍵盤
+        const origShowPuzzle = showPuzzle;
+        showPuzzle = function(){
+            origShowPuzzle();
+            if (isTouch) showKeypad(true);
+        };
+        const origHandleCorrect = handleCorrect;
+        handleCorrect = function(){
+            origHandleCorrect();
+            showKeypad(false);
+        };
+        const origHandleWrong = handleWrong;
+        handleWrong = function(){
+            origHandleWrong();
+            // 答錯仍保留鍵盤顯示
+            if (isTouch) showKeypad(true);
+        };
+    })();
 </script>
 
 </body>
