@@ -14,6 +14,8 @@
             --card-border: #fff;
         }
 
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             margin: 0;
             padding: 0;
@@ -347,12 +349,13 @@
             html, body { height: 100%; }
             body { min-height: 100dvh; overflow-y: hidden; }
 
-            .header { margin-top: 6px; }
+            .header { margin-top: 6px; padding: 0 12px; }
             h1 { font-size: clamp(1.1rem, 5.2vw, 1.5rem); margin: 2px 0 4px; }
             .stats-bar { gap: 6px; margin-bottom: 4px; flex-wrap: wrap; justify-content: center; }
             .stat-item { padding: 3px 8px; font-size: 0.8rem; }
 
             .game-world { margin-top: 2px; padding-bottom: 104px; }
+            #card.card-container { margin: 0 auto; }
             .card-container { width: 170px; height: 240px; }
             .formula { font-size: 2.2rem; }
             .answer-input { font-size: 1.3rem; padding: 6px; border-width: 3px; width: 88%; }
@@ -372,7 +375,7 @@
             .onscreen-keypad .key { padding: 9px 0; font-size: 1rem; }
 
             /* 控制鈕更精簡 */
-            .controls { margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+            .controls { margin-top: 8px; gap: 8px; flex-wrap: wrap; justify-content: center; }
             .btn { font-size: 0.95rem; padding: 7px 14px; }
         }
     </style>
