@@ -432,9 +432,10 @@
                 const oldFoods = container.querySelectorAll('.food-item');
                 oldFoods.forEach(f => f.remove());
                 
-                const plateRect = container.getBoundingClientRect();
-                const centerX = 250;
-                const centerY = 250;
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const plateRadius = rect.width / 2;
                 
                 for (let i = 0; i < this.currentTotal; i++) {
                     const food = document.createElement('div');
@@ -445,7 +446,8 @@
                     
                     // 隨機分佈在主盤圓周內，避開太陽
                     const angle = Math.random() * Math.PI * 2;
-                    const dist = 100 + Math.random() * 100; // 在 100-200 像素半徑內
+                    // 在 20% 到 85% 半徑之間分佈，避免太靠近邊緣或太陽
+                    const dist = (plateRadius * 0.2) + Math.random() * (plateRadius * 0.6); 
                     
                     food.style.left = `${centerX + Math.cos(angle) * dist - 20}px`;
                     food.style.top = `${centerY + Math.sin(angle) * dist - 20}px`;
@@ -552,12 +554,14 @@
                                 target.appendChild(draggedItem);
                             }
                         } else {
-                            // 回到原位
+                            // 回到主盤原位 (如果掉在外面)
+                            const mainPlate = document.getElementById('mainPlate');
+                            const rect = mainPlate.getBoundingClientRect();
+                            draggedItem.className = 'food-item in-plate';
                             draggedItem.style.position = 'absolute';
-                            // 這裡簡單處理，回到主盤中心
-                            document.getElementById('mainPlate').appendChild(draggedItem);
-                            draggedItem.style.left = '230px';
-                            draggedItem.style.top = '230px';
+                            draggedItem.style.left = (rect.width / 2 - 20) + 'px';
+                            draggedItem.style.top = (rect.height / 2 - 20) + 'px';
+                            mainPlate.appendChild(draggedItem);
                         }
                         draggedItem.style.zIndex = 10;
                         draggedItem = null;
