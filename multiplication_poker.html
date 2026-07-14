@@ -342,14 +342,38 @@
             max-width: 90%;
         }
 
-        /* 手機適配 */
+        /* 手機適配：在一個畫面完整顯示 */
         @media (max-width: 600px) {
-            .card-container {
-                width: 180px;
-                height: 260px;
+            html, body { height: 100%; }
+            body { min-height: 100dvh; overflow-y: hidden; }
+
+            .header { margin-top: 6px; }
+            h1 { font-size: clamp(1.1rem, 5.2vw, 1.5rem); margin: 2px 0 4px; }
+            .stats-bar { gap: 6px; margin-bottom: 4px; flex-wrap: wrap; justify-content: center; }
+            .stat-item { padding: 3px 8px; font-size: 0.8rem; }
+
+            .game-world { margin-top: 2px; padding-bottom: 104px; }
+            .card-container { width: 170px; height: 240px; }
+            .formula { font-size: 2.2rem; }
+            .answer-input { font-size: 1.3rem; padding: 6px; border-width: 3px; width: 88%; }
+
+            /* 收集區縮小並避免超出版面 */
+            .collection-deck {
+                position: absolute;
+                bottom: 0; /* 鎖在畫面底部內 */
+                height: 96px;
+                padding-bottom: 6px;
             }
-            .formula { font-size: 2.5rem; }
-            .answer-input { font-size: 1.8rem; }
+            .collected-card { width: 42px; height: 62px; margin: 0 -8px; }
+
+            /* 螢幕鍵盤更緊湊，避免擠出畫面 */
+            .onscreen-keypad { max-width: 320px; padding: 6px; margin-top: 6px; }
+            .onscreen-keypad .key-row { gap: 6px; margin: 4px 0; }
+            .onscreen-keypad .key { padding: 9px 0; font-size: 1rem; }
+
+            /* 控制鈕更精簡 */
+            .controls { margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+            .btn { font-size: 0.95rem; padding: 7px 14px; }
         }
     </style>
 </head>
@@ -700,3 +724,5 @@
     </script>
 </body>
 </html>
+
+
