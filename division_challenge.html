@@ -313,6 +313,31 @@
             .remainder-container { margin-top: 6px; padding: 8px; min-width: auto; }
             .remainder-zone { min-height: 34px; padding: 6px; gap: 3px; }
         }
+
+        /* 平板橫向（Landscape）優化：縮小元件避免版面過大 */
+        @media (min-width: 768px) and (max-width: 1100px) and (orientation: landscape) {
+            body { overflow-x: hidden; }
+            .header { padding: 14px; margin-bottom: 12px; }
+            h1 { font-size: clamp(22px, 3.6vw, 30px); }
+            .info-panel { padding: 12px 18px; font-size: 1em; margin-bottom: 10px; }
+            .question-text { font-size: 1.25em; }
+            .game-container { gap: 24px; padding: 16px; }
+
+            /* 主盤略縮，仍保有視覺重心 */
+            .main-plate-container { width: 380px; height: 380px; border-width: 12px; }
+            .main-plate-design { border-width: 2px; }
+            .sun { width: 68px; height: 68px; }
+
+            /* 側盤與食物略縮，保有清晰度 */
+            .side-plates-container { gap: 16px; }
+            .side-plate { width: 104px; height: 104px; border-width: 7px; padding: 8px; }
+            .side-plate::after { bottom: -22px; font-size: 13px; }
+            .food-item { width: 32px; height: 32px; font-size: 24px; }
+
+            /* 控制區塊微調 */
+            .control-btns { gap: 12px; margin-top: 12px; }
+            .btn { padding: 9px 18px; font-size: 0.95em; }
+        }
     </style>
 </head>
 <body>
