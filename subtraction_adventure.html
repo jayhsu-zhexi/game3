@@ -10,6 +10,7 @@
             --path-stone: #a0a0a0;
             --flower-glow: #ff00ff;
             --accent-gold: #ffd700;
+            --keypad-height: 220px; /* 估計的虛擬鍵盤高度，用於保留可視空間 */
         }
 
         * {
@@ -162,6 +163,30 @@
             text-align: center;
         }
 
+        /* 題目工具列（退出 / 關閉） */
+        .puzzle-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin: -10px 0 10px 0;
+        }
+        .puzzle-toolbar .toolbar-btn {
+            background: #555;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .puzzle-toolbar .toolbar-btn.exit {
+            background: #e67e22;
+        }
+        .puzzle-toolbar .toolbar-btn.close {
+            background: #7f8c8d;
+        }
+
         .subtraction-vertical {
             font-family: 'Courier New', Courier, monospace;
             font-size: 48px;
@@ -279,6 +304,69 @@
         }
         .onscreen-keypad .key:active { transform: scale(0.98); }
         .onscreen-keypad .key.action { background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; }
+
+                /* 明確區隔：題目與鍵盤 */
+                .question-panel {
+                    background: #ffffff;
+                    border: 2px solid rgba(46, 204, 113, 0.35);
+                    border-radius: 14px;
+                    padding: 16px 18px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.08) inset;
+                }
+                .panel-sep {
+                    width: 100%;
+                    height: 0;
+                    border-top: 2px dashed rgba(46, 204, 113, 0.6);
+                    margin: 12px 0 8px 0;
+                }
+                .onscreen-keypad .keypad-header {
+                    text-align: center;
+                    font-size: 0.95rem;
+                    color: #dff6e8;
+                    background: rgba(46, 204, 113, 0.18);
+                    border: 1px solid rgba(46, 204, 113, 0.5);
+                    border-radius: 10px;
+                    padding: 6px 8px;
+                    margin-bottom: 8px;
+                    letter-spacing: 1px;
+                }
+
+        /* 讓題目與鍵盤同屏顯示的版面規則 */
+        .puzzle-card { 
+            max-height: min(80vh, calc(100dvh - 48px));
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .keypad-visible #puzzle-overlay { 
+            padding-bottom: calc(var(--keypad-height) + env(safe-area-inset-bottom, 0px) + 12px);
+        }
+        .keypad-visible .puzzle-card { 
+            /* 先前為了避免被鍵盤遮住而預留太大空間，改為小幅度內距即可 */
+            padding-bottom: 12px;
+        }
+        .keypad-visible .subtraction-vertical { 
+            font-size: clamp(28px, 7vw, 44px);
+        }
+        .keypad-visible .ans-input { 
+            font-size: clamp(22px, 6vw, 36px);
+            padding: 8px;
+        }
+        .keypad-visible .submit-btn { 
+            font-size: clamp(16px, 4.5vw, 20px);
+            padding: 12px 20px;
+        }
+        @media (max-height: 700px) {
+            .subtraction-vertical { font-size: 40px; }
+            .ans-input { font-size: 28px; }
+            .submit-btn { font-size: 18px; padding: 12px 18px; }
+        }
+        @media (max-height: 580px) {
+            .subtraction-vertical { font-size: 34px; }
+            .ans-input { font-size: 24px; }
+            .puzzle-card { max-height: calc(100dvh - 36px); }
+        }
     </style>
 </head>
 <body>
@@ -307,15 +395,25 @@
     <!-- Puzzle Modal -->
     <div id="puzzle-overlay">
         <div class="puzzle-card">
-            <h3 style="margin-bottom: 20px;">🗿 古代石墟的謎題</h3>
-            <div class="subtraction-vertical">
-                <div id="num1">504</div>
-                <div>- <span id="num2">267</span></div>
-                <div class="subtraction-line"></div>
+            <div class="puzzle-toolbar">
+                <button type="button" class="toolbar-btn exit" onclick="exitGame()">🏠 返回地圖</button>
+                <button type="button" class="toolbar-btn close" onclick="cancelPuzzle()">✖ 關閉題目</button>
             </div>
-            <input type="number" id="ans-input" class="ans-input" placeholder="答案" inputmode="none" autocomplete="off">
+            <div class="question-panel">
+                <h3 style="margin-bottom: 16px;">🗿 古代石墟的謎題</h3>
+                <div class="subtraction-vertical">
+                    <div id="num1">504</div>
+                    <div>- <span id="num2">267</span></div>
+                    <div class="subtraction-line"></div>
+                </div>
+                <input type="number" id="ans-input" class="ans-input" placeholder="答案" inputmode="none" autocomplete="off">
+                <button class="submit-btn" onclick="checkAnswer()">提交答案</button>
+                <p id="hint" style="margin-top: 12px; color: #e74c3c; font-weight: bold; display: none;">再試一次！記得連環退位喔！</p>
+            </div>
+            <div class="panel-sep"></div>
             <!-- 螢幕數字鍵盤（僅觸控裝置顯示，避免原生鍵盤遮擋） -->
             <div id="onscreen-keypad" class="onscreen-keypad" aria-label="數字鍵盤" role="group">
+                <div class="keypad-header">數字鍵盤</div>
                 <div class="key-row">
                     <button type="button" class="key">1</button>
                     <button type="button" class="key">2</button>
@@ -337,8 +435,6 @@
                     <button type="button" class="key action" data-action="enter">✓</button>
                 </div>
             </div>
-            <button class="submit-btn" onclick="checkAnswer()">提交答案</button>
-            <p id="hint" style="margin-top: 15px; color: #e74c3c; font-weight: bold; display: none;">再試一次！記得連環退位喔！</p>
         </div>
     </div>
 
@@ -528,6 +624,21 @@
         document.getElementById('ans-input').focus();
     }
 
+    // 允許在答題時退出或關閉題目
+    function cancelPuzzle(){
+        const overlay = document.getElementById('puzzle-overlay');
+        overlay.style.display = 'none';
+        const keypad = document.getElementById('onscreen-keypad');
+        if (keypad) keypad.style.display = 'none';
+        document.body.classList.remove('keypad-visible');
+    }
+    function exitGame(){
+        // 確認離開，避免誤觸
+        if (confirm('要離開減法大冒險並返回地圖嗎？')){
+            window.location.href = 'index.html';
+        }
+    }
+
     function checkAnswer() {
         const userAns = parseInt(document.getElementById('ans-input').value);
         if (userAns === GameState.currentQuestion.ans) {
@@ -612,7 +723,7 @@
         const input = document.getElementById('ans-input');
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        function showKeypad(show){ if (keypad) keypad.style.display = show ? 'block' : 'none'; }
+        function showKeypad(show){ if (keypad) keypad.style.display = show ? 'block' : 'none'; document.body.classList.toggle('keypad-visible', !!show); }
 
         if (isTouch && keypad && input) {
             // 關閉原生鍵盤
@@ -661,6 +772,16 @@
             if (isTouch) showKeypad(true);
         };
     })();
+
+    // Esc 鍵可關閉題目
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('puzzle-overlay');
+            if (overlay && overlay.style.display !== 'none') {
+                cancelPuzzle();
+            }
+        }
+    });
 </script>
 
 </body>

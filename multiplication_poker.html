@@ -517,6 +517,27 @@
         let timerInterval;
         let currentAnswer = 0;
         let targetCount = 36; // 總卡牌數
+        // 新增：題庫與索引，避免題目重複
+        let questions = [];
+        let currentIndex = 0;
+
+        // 建立 2~9 的不重複題庫（a <= b，共 36 題）並隨機洗牌
+        function buildQuestions(){
+            const qs = [];
+            for (let a = 2; a <= 9; a++){
+                for (let b = a; b <= 9; b++){
+                    qs.push([a, b]);
+                }
+            }
+            return shuffle(qs);
+        }
+        function shuffle(arr){
+            for (let i = arr.length - 1; i > 0; i--){
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
 
         // 建立星塵背景
         function createStars() {
@@ -541,10 +562,13 @@
                 endGame();
                 return;
             }
-
-            // 產生 2-9 的乘法 (排除太簡單的 1)
-            const a = Math.floor(Math.random() * 8) + 2;
-            const b = Math.floor(Math.random() * 8) + 2;
+            // 題目改為使用預先洗牌的不重複題庫
+            const q = questions[currentIndex];
+            if (!q) {
+                endGame();
+                return;
+            }
+            const [a, b] = q;
             currentAnswer = a * b;
             formulaText.textContent = `${a} × ${b}`;
             answerInput.value = '';
@@ -560,6 +584,12 @@
             comboCountEl.textContent = '0';
             deckEl.innerHTML = '';
             startBtn.style.display = 'none';
+
+            // 準備不重複題庫
+            questions = buildQuestions();
+            currentIndex = 0;
+            // 以題庫長度作為目標張數，保持一致
+            targetCount = questions.length;
             
             card.classList.add('flipped');
             startTime = Date.now();
@@ -606,6 +636,8 @@
                 { transform: 'rotateY(180deg) scale(1)' }
             ], { duration: 200 });
 
+            // 前進到下一題（僅答對才換題）
+            currentIndex++;
             nextQuestion();
         }
 
