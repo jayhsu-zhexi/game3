@@ -270,18 +270,48 @@
 
         /* 響應式調整 */
         @media (max-width: 600px) {
-            .side-plate {
-                width: 80px;
-                height: 80px;
-            }
-            .food-item {
-                width: 30px;
-                height: 30px;
-                font-size: 22px;
-            }
-            .main-plate-container {
-                border-width: 10px;
-            }
+            html, body { height: 100vh; }
+            body { overflow-x: hidden; }
+            .header { padding: 12px; margin-bottom: 10px; }
+            h1 { font-size: clamp(18px, 5.2vw, 26px); }
+            .info-panel { padding: 10px 14px; font-size: 0.95em; margin-bottom: 8px; }
+            .question-text { font-size: 1.2em; }
+            .stats { gap: 12px; font-size: 0.85em; }
+            .game-container { gap: 16px; padding: 12px; }
+            .main-plate-container { width: 320px; height: 320px; border-width: 10px; }
+            .main-plate-design { border-width: 1px; }
+            .constellation-lines { display: none; }
+            .sun { width: 60px; height: 60px; }
+            .side-plates-container { gap: 12px; }
+            .side-plate { width: 90px; height: 90px; border-width: 6px; padding: 6px; }
+            .side-plate::after { bottom: -20px; font-size: 12px; }
+            .food-item { width: 28px; height: 28px; font-size: 21px; }
+            .control-btns { gap: 10px; margin-top: 10px; }
+            .btn { padding: 8px 16px; font-size: 0.95em; }
+            .remainder-container { margin-top: 10px; padding: 10px; min-width: auto; }
+            .remainder-zone { min-height: 40px; padding: 8px; gap: 4px; }
+        }
+
+        @media (max-width: 480px) {
+            html, body { height: 100vh; }
+            body { overflow: hidden; }
+            .header { padding: 8px; margin-bottom: 6px; }
+            h1 { font-size: clamp(16px, 5vw, 20px); }
+            .info-panel { padding: 8px 10px; font-size: 0.9em; margin-bottom: 6px; }
+            .question-text { font-size: 1.05em; }
+            .stats { gap: 8px; font-size: 0.8em; }
+            .game-container { gap: 10px; padding: 8px; }
+            .main-plate-container { width: 260px; height: 260px; border-width: 8px; }
+            .main-plate-design { border-width: 1px; }
+            .sun { width: 48px; height: 48px; }
+            .side-plates-container { gap: 10px; }
+            .side-plate { width: 72px; height: 72px; border-width: 5px; padding: 4px; }
+            .side-plate::after { bottom: -16px; font-size: 11px; }
+            .food-item { width: 24px; height: 24px; font-size: 18px; }
+            .control-btns { gap: 8px; margin-top: 6px; }
+            .btn { padding: 6px 12px; font-size: 0.85em; }
+            .remainder-container { margin-top: 6px; padding: 8px; min-width: auto; }
+            .remainder-zone { min-height: 34px; padding: 6px; gap: 3px; }
         }
     </style>
 </head>
