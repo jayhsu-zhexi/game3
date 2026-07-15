@@ -105,11 +105,25 @@
 
         /* 行星側盤 */
         .side-plates-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: none; /* 已改為左右兩側佈局，隱藏舊容器 */
+        }
+
+        /* 新的左右側答案盤佈局 */
+        .stage-row {
             width: 100%;
+            max-width: 1000px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+        .side-plates-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex: 0 0 auto;
         }
 
         .side-plate {
@@ -278,6 +292,8 @@
             .question-text { font-size: 1.2em; }
             .stats { gap: 12px; font-size: 0.85em; }
             .game-container { gap: 16px; padding: 12px; }
+            .stage-row { flex-direction: column; gap: 12px; }
+            .side-plates-column { flex-direction: row; flex-wrap: wrap; gap: 10px; }
             .main-plate-container { width: 320px; height: 320px; border-width: 10px; }
             .main-plate-design { border-width: 1px; }
             .constellation-lines { display: none; }
@@ -301,6 +317,8 @@
             .question-text { font-size: 1.05em; }
             .stats { gap: 8px; font-size: 0.8em; }
             .game-container { gap: 10px; padding: 8px; }
+            .stage-row { flex-direction: column; gap: 8px; }
+            .side-plates-column { flex-direction: row; flex-wrap: wrap; gap: 8px; }
             .main-plate-container { width: 260px; height: 260px; border-width: 8px; }
             .main-plate-design { border-width: 1px; }
             .sun { width: 48px; height: 48px; }
@@ -338,6 +356,39 @@
             .control-btns { gap: 12px; margin-top: 12px; }
             .btn { padding: 9px 18px; font-size: 0.95em; }
         }
+
+        /* iPad mini 橫向（Landscape）專用：確保單頁顯示 */
+        @media (min-width: 1024px) and (max-width: 1200px) and (orientation: landscape) {
+            html, body { height: 100vh; }
+            body { overflow-x: hidden; }
+            .header { padding: 12px; margin-bottom: 10px; }
+            h1 { font-size: clamp(20px, 3.2vw, 28px); }
+
+            .info-panel { padding: 10px 16px; font-size: 0.98em; margin-bottom: 8px; }
+            .question-text { font-size: 1.2em; }
+
+            .game-container { gap: 20px; padding: 14px; }
+
+            /* 主盤縮小以適應 744px 高度，避免垂直溢出 */
+            .main-plate-container { width: 360px; height: 360px; border-width: 12px; }
+            .main-plate-design { border-width: 2px; }
+            .sun { width: 60px; height: 60px; }
+            .constellation-lines { display: none; }
+
+            /* 側盤、食物與間距縮減 */
+            .side-plates-container { gap: 14px; }
+            .side-plate { width: 96px; height: 96px; border-width: 7px; padding: 6px; }
+            .side-plate::after { bottom: -20px; font-size: 12px; }
+            .food-item { width: 30px; height: 30px; font-size: 22px; }
+
+            /* 控制按鈕精簡 */
+            .control-btns { gap: 10px; margin-top: 10px; }
+            .btn { padding: 8px 16px; font-size: 0.95em; }
+
+            /* 餘數區域緊湊化 */
+            .remainder-container { margin-top: 8px; padding: 10px; min-width: auto; }
+            .remainder-zone { min-height: 40px; padding: 8px; gap: 4px; }
+        }
     </style>
 </head>
 <body>
@@ -355,22 +406,25 @@
     </div>
 
     <div class="game-container">
-        <!-- 中央主盤 -->
-        <div id="mainPlate" class="main-plate-container">
-            <div class="main-plate-design"></div>
-            <div class="sun"></div>
-            <svg class="constellation-lines" viewBox="0 0 500 500">
-                <circle cx="250" cy="250" r="100" fill="none" stroke="gold" stroke-width="1" stroke-dasharray="5,5" />
-                <circle cx="250" cy="250" r="180" fill="none" stroke="gold" stroke-width="1" stroke-dasharray="5,5" />
-                <line x1="250" y1="50" x2="250" y2="450" stroke="gold" stroke-width="0.5" />
-                <line x1="50" y1="250" x2="450" y2="250" stroke="gold" stroke-width="0.5" />
-            </svg>
-            <!-- 食物會生成在這裡 -->
-        </div>
+        <div class="stage-row">
+            <!-- 左側答案盤列 -->
+            <div id="sidePlatesLeft" class="side-plates-column" aria-label="左側答案盤"></div>
 
-        <!-- 側盤區域 -->
-        <div id="sidePlatesContainer" class="side-plates-container">
-            <!-- 側盤會動態生成 -->
+            <!-- 中央主盤 -->
+            <div id="mainPlate" class="main-plate-container">
+                <div class="main-plate-design"></div>
+                <div class="sun"></div>
+                <svg class="constellation-lines" viewBox="0 0 500 500">
+                    <circle cx="250" cy="250" r="100" fill="none" stroke="gold" stroke-width="1" stroke-dasharray="5,5" />
+                    <circle cx="250" cy="250" r="180" fill="none" stroke="gold" stroke-width="1" stroke-dasharray="5,5" />
+                    <line x1="250" y1="50" x2="250" y2="450" stroke="gold" stroke-width="0.5" />
+                    <line x1="50" y1="250" x2="450" y2="250" stroke="gold" stroke-width="0.5" />
+                </svg>
+                <!-- 食物會生成在這裡 -->
+            </div>
+
+            <!-- 右側答案盤列 -->
+            <div id="sidePlatesRight" class="side-plates-column" aria-label="右側答案盤"></div>
         </div>
 
         <!-- 餘數區域 -->
@@ -464,16 +518,19 @@
             },
 
             renderPlates() {
-                const container = document.getElementById('sidePlatesContainer');
-                container.innerHTML = '';
+                const leftCol = document.getElementById('sidePlatesLeft');
+                const rightCol = document.getElementById('sidePlatesRight');
+                if (!leftCol || !rightCol) return;
+                leftCol.innerHTML = '';
+                rightCol.innerHTML = '';
                 this.plates = [];
                 
                 for (let i = 0; i < this.currentDivisor; i++) {
                     const plate = document.createElement('div');
                     plate.className = 'side-plate';
                     plate.id = `plate-${i}`;
-                    plate.dataset.label = this.plateNames[i];
-                    container.appendChild(plate);
+                    plate.dataset.label = this.plateNames[i] || `盤子${i+1}`;
+                    (i % 2 === 0 ? leftCol : rightCol).appendChild(plate);
                     this.plates.push(plate);
                 }
                 
